@@ -31,7 +31,7 @@
     "emoji-mart": "^5.5.2",
     "ethers": "5.6.0",
     "filereader-stream": "^2.0.0",
-    "graphql": "^16.6.0",
+    "graphql": "^16.8.1",
     "interweave": "^13.1.0",
     "make-plural": "^7.3.0",
     "mixpanel-browser": "^2.47.0",
