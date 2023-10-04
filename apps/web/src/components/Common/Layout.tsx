@@ -1,3 +1,9 @@
+import { getShowFullScreen, getToastOptions } from '@lenstube/browser'
+import { AUTH_ROUTES } from '@lenstube/constants'
+import { useIsMounted } from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
+import { useAllProfilesQuery, useUserSigNoncesQuery } from '@lenstube/lens'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
 import useAuthPersistStore, {
   hydrateAuthTokens,
   signOut
@@ -5,20 +11,12 @@ import useAuthPersistStore, {
 import useChannelStore from '@lib/store/channel'
 import usePersistStore from '@lib/store/persist'
 import clsx from 'clsx'
-import type { Profile } from 'lens'
-import { useUserProfilesQuery } from 'lens'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useTheme } from 'next-themes'
 import type { FC, ReactNode } from 'react'
 import React, { useEffect } from 'react'
 import { toast, Toaster } from 'react-hot-toast'
-import type { CustomErrorWithData } from 'utils'
-import { POLYGON_CHAIN_ID } from 'utils'
-import { AUTH_ROUTES } from 'utils/data/auth-routes'
-import { getShowFullScreen } from 'utils/functions/getShowFullScreen'
-import { getToastOptions } from 'utils/functions/getToastOptions'
-import useIsMounted from 'utils/hooks/useIsMounted'
 import { useAccount, useDisconnect, useNetwork } from 'wagmi'
 
 import FullPageLoader from './FullPageLoader'
@@ -34,23 +32,20 @@ const NO_HEADER_PATHS = ['/auth']
 
 const Layout: FC<Props> = ({ children }) => {
   const setUserSigNonce = useChannelStore((state) => state.setUserSigNonce)
-  const setChannels = useChannelStore((state) => state.setChannels)
-  const setSelectedChannel = useChannelStore(
-    (state) => state.setSelectedChannel
-  )
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const setActiveChannel = useChannelStore((state) => state.setActiveChannel)
   const sidebarCollapsed = usePersistStore((state) => state.sidebarCollapsed)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
-  const setSelectedChannelId = useAuthPersistStore(
-    (state) => state.setSelectedChannelId
+  const setSelectedSimpleProfile = useAuthPersistStore(
+    (state) => state.setSelectedSimpleProfile
   )
 
   const { chain } = useNetwork()
   const { resolvedTheme } = useTheme()
   const { mounted } = useIsMounted()
   const { address } = useAccount()
+
   const { pathname, replace, asPath } = useRouter()
 
   const { disconnect } = useDisconnect({
@@ -61,69 +56,64 @@ const Layout: FC<Props> = ({ children }) => {
 
   const showFullScreen = getShowFullScreen(pathname)
 
-  const setUserChannels = (channels: Profile[]) => {
-    setChannels(channels)
-    const channel = channels.find((ch) => ch.id === selectedChannelId)
-    setSelectedChannel(channel ?? channels[0])
-    setSelectedChannelId(channel?.id)
-  }
-
   const resetAuthState = () => {
-    setSelectedChannel(null)
-    setSelectedChannelId(null)
+    setActiveChannel(null)
+    setSelectedSimpleProfile(null)
   }
 
-  const { loading } = useUserProfilesQuery({
+  useUserSigNoncesQuery({
+    skip: !selectedSimpleProfile?.id,
+    onCompleted: ({ userSigNonces }) => {
+      setUserSigNonce(userSigNonces.lensHubOnChainSigNonce)
+    },
+    pollInterval: 10_000
+  })
+
+  useAllProfilesQuery({
     variables: {
       request: { ownedBy: [address] }
     },
-    skip: !selectedChannelId,
+    skip: !selectedSimpleProfile,
     onCompleted: (data) => {
       const channels = data?.profiles?.items as Profile[]
       if (!channels.length) {
         return resetAuthState()
       }
-      setUserChannels(channels)
-      setUserSigNonce(data?.userSigNonces?.lensHubOnChainSigNonce)
+      const profile = channels.find((ch) => ch.id === selectedSimpleProfile?.id)
+      if (profile) {
+        setActiveChannel(profile ?? channels[0])
+      }
     },
     onError: () => {
-      setSelectedChannelId(null)
+      setSelectedSimpleProfile(null)
+      setActiveChannel(null)
     }
   })
 
   const validateAuthentication = () => {
-    if (
-      !selectedChannel &&
-      !selectedChannelId &&
-      AUTH_ROUTES.includes(pathname)
-    ) {
+    if (!selectedSimpleProfile && AUTH_ROUTES.includes(pathname)) {
       // Redirect to signin page
       replace(`/auth?next=${asPath}`)
     }
-    const logout = () => {
-      resetAuthState()
-      signOut()
-      disconnect?.()
-    }
-    const ownerAddress = selectedChannel?.ownedBy
-    const isWrongNetworkChain = chain?.id !== POLYGON_CHAIN_ID
+    const ownerAddress = selectedSimpleProfile?.ownedBy
     const isSwitchedAccount =
       ownerAddress !== undefined && ownerAddress !== address
     const { accessToken } = hydrateAuthTokens()
-    const shouldLogout =
-      !accessToken || isWrongNetworkChain || isSwitchedAccount
+    const shouldLogout = !accessToken || isSwitchedAccount
 
-    if (shouldLogout && selectedChannelId) {
-      logout()
+    if (shouldLogout && selectedSimpleProfile?.id) {
+      resetAuthState()
+      signOut()
+      disconnect?.()
     }
   }
 
   useEffect(() => {
     validateAuthentication()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address, chain, disconnect, selectedChannelId])
+  }, [address, chain, disconnect, selectedSimpleProfile])
 
-  if (loading || !mounted) {
+  if (!mounted) {
     return <FullPageLoader />
   }
 
@@ -157,7 +147,7 @@ const Layout: FC<Props> = ({ children }) => {
               'ultrawide:px-0',
               showFullScreen && '!p-0',
               pathname !== '/channel/[channel]' &&
-                'ultrawide:max-w-[110rem] mx-auto py-4 md:px-3 2xl:py-6'
+                'ultrawide:max-w-[90rem] mx-auto px-2 py-4 md:px-3 2xl:py-6'
             )}
           >
             {children}

@@ -17,12 +17,17 @@ fragment ProfileFields on Profile {
     value
   }
   stats {
-    totalFollowers
-    totalPosts
+    ...ProfileStatsFields
   }
   coverPicture {
     ... on MediaSet {
       original {
+        url
+      }
+      onChain {
+        url
+      }
+      optimized {
         url
       }
     }
@@ -30,6 +35,12 @@ fragment ProfileFields on Profile {
   picture {
     ... on MediaSet {
       original {
+        url
+      }
+      onChain {
+        url
+      }
+      optimized {
         url
       }
     }

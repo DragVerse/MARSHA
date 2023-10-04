@@ -1,33 +1,38 @@
 import Timeline from '@components/Home/Timeline'
 import TimelineShimmer from '@components/Shimmers/TimelineShimmer'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
-import useAppStore from '@lib/store'
-import { t } from '@lingui/macro'
-import type { Publication } from 'lens'
+import {
+  ALLOWED_APP_IDS,
+  IS_MAINNET,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_APP_ID,
+  SCROLL_ROOT_MARGIN
+} from '@lenstube/constants'
+import type { Publication } from '@lenstube/lens'
 import {
   PublicationMainFocus,
   PublicationSortCriteria,
   PublicationTypes,
   useExploreQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import useAppStore from '@lib/store'
+import useAuthPersistStore from '@lib/store/auth'
+import { t } from '@lingui/macro'
 import React from 'react'
 import { useInView } from 'react-cool-inview'
-import {
-  ALLOWED_APP_IDS,
-  LENS_CUSTOM_FILTERS,
-  LENSTUBE_APP_ID,
-  SCROLL_ROOT_MARGIN
-} from 'utils'
 
 const HomeFeed = () => {
   const activeTagFilter = useAppStore((state) => state.activeTagFilter)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const request = {
     sortCriteria: PublicationSortCriteria.CuratedProfiles,
     limit: 32,
     noRandomize: false,
-    sources: [LENSTUBE_APP_ID, ...ALLOWED_APP_IDS],
+    sources: IS_MAINNET ? [LENSTUBE_APP_ID, ...ALLOWED_APP_IDS] : undefined,
     publicationTypes: [PublicationTypes.Post],
     customFilters: LENS_CUSTOM_FILTERS,
     metadata: {
@@ -38,7 +43,7 @@ const HomeFeed = () => {
   }
 
   const { data, loading, error, fetchMore } = useExploreQuery({
-    variables: { request }
+    variables: { request, channelId: selectedSimpleProfile?.id ?? null }
   })
 
   const pageInfo = data?.explorePublications?.pageInfo
@@ -52,7 +57,8 @@ const HomeFeed = () => {
           request: {
             ...request,
             cursor: pageInfo?.next
-          }
+          },
+          channelId: selectedSimpleProfile?.id ?? null
         }
       })
     }

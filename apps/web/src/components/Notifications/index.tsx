@@ -6,16 +6,27 @@ import MentionOutline from '@components/Common/Icons/MentionOutline'
 import SubscribeOutline from '@components/Common/Icons/SubscribeOutline'
 import MetaTags from '@components/Common/MetaTags'
 import NotificationsShimmer from '@components/Shimmers/NotificationsShimmer'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
 import { Tab } from '@headlessui/react'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  IS_MAINNET,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_BYTES_APP_ID,
+  SCROLL_ROOT_MARGIN
+} from '@lenstube/constants'
+import type { Notification } from '@lenstube/lens'
+import { NotificationTypes, useNotificationsQuery } from '@lenstube/lens'
+import { CustomNotificationsFilterEnum } from '@lenstube/lens/custom-types'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
 import useChannelStore from '@lib/store/channel'
 import { t, Trans } from '@lingui/macro'
 import clsx from 'clsx'
-import type { Notification } from 'lens'
-import { NotificationTypes, useNotificationsQuery } from 'lens'
 import React, { useState } from 'react'
 import { useInView } from 'react-cool-inview'
+<<<<<<< HEAD
 import {
   Analytics,
   LENS_CUSTOM_FILTERS,
@@ -24,6 +35,9 @@ import {
   SCROLL_ROOT_MARGIN,
   TRACK
 } from 'utils'
+=======
+
+>>>>>>> upstream/main
 import CollectedNotification from './Collected'
 import CommentedNotification from './Commented'
 import NotificationsFilter from './Filter'
@@ -43,7 +57,9 @@ const initialFilters = {
 
 const Notifications: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState(initialFilters)
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
   const setHasNewNotification = useChannelStore(
     (state) => state.setHasNewNotification
   )
@@ -85,10 +101,18 @@ const Notifications: React.FC = () => {
     limit: 30,
     sources: activeFilter.subscriptions
       ? undefined
-      : [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID],
+      : IS_MAINNET
+      ? [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID]
+      : undefined,
     customFilters: LENS_CUSTOM_FILTERS,
+<<<<<<< HEAD
     profileId: selectedChannel?.id,
     highSignalFilter: true,
+=======
+    profileId: selectedSimpleProfile?.id,
+    highSignalFilter:
+      selectedNotificationsFilter === CustomNotificationsFilterEnum.HIGH_SIGNAL,
+>>>>>>> upstream/main
     notificationTypes: getNotificationFilters()
   }
 

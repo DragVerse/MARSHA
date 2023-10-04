@@ -1,11 +1,14 @@
-import IsVerified from '@components/Common/IsVerified'
+import Badge from '@components/Common/Badge'
 import SubscribeActions from '@components/Common/SubscribeActions'
-import type { Publication } from 'lens'
+import {
+  formatNumber,
+  getProfilePicture,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
-import formatNumber from 'utils/functions/formatNumber'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
 type Props = {
   video: Publication
@@ -26,15 +29,17 @@ const BottomOverlay: FC<Props> = ({ video }) => {
             className="flex flex-none cursor-pointer items-center space-x-2"
           >
             <img
-              src={getProfilePicture(channel, 'avatar')}
+              src={getProfilePicture(channel, 'AVATAR')}
               className="h-9 w-9 rounded-full"
               draggable={false}
               alt={channel?.handle}
             />
             <div className="flex min-w-0 flex-col items-start text-white">
               <h6 className="flex max-w-full items-center space-x-1">
-                <span className="truncate">{channel?.handle}</span>
-                <IsVerified
+                <span className="truncate">
+                  {trimLensHandle(channel?.handle)}
+                </span>
+                <Badge
                   id={channel?.id}
                   color="text-gray-300 dark:text-gray-300"
                 />

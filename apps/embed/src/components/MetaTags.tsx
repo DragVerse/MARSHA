@@ -1,11 +1,19 @@
+import {
+  LENSTUBE_APP_NAME,
+  LENSTUBE_WEBSITE_URL,
+  OG_IMAGE
+} from '@lenstube/constants'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import React from 'react'
+<<<<<<< HEAD
 import {
   FALLBACK_COVER_URL,
   LENSTUBE_APP_NAME,
   LENSTUBE_WEBSITE_URL
 } from 'utils'
+=======
+>>>>>>> upstream/main
 
 type Props = {
   title?: string

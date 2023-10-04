@@ -1,21 +1,20 @@
 import DislikeOutline from '@components/Common/Icons/DislikeOutline'
 import LikeOutline from '@components/Common/Icons/LikeOutline'
-import useAuthPersistStore from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import { t, Trans } from '@lingui/macro'
-import { useConnectModal } from '@rainbow-me/rainbowkit'
-import clsx from 'clsx'
-import type { Publication } from 'lens'
+import { Analytics, TRACK } from '@lenstube/browser'
+import { formatNumber } from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import {
   ReactionTypes,
   useAddReactionMutation,
   useRemoveReactionMutation
-} from 'lens'
+} from '@lenstube/lens'
+import useAuthPersistStore from '@lib/store/auth'
+import { t, Trans } from '@lingui/macro'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
+import clsx from 'clsx'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
-import { Analytics, TRACK } from 'utils'
-import formatNumber from 'utils/functions/formatNumber'
 
 type Props = {
   publication: Publication
@@ -34,10 +33,9 @@ const PublicationReaction: FC<Props> = ({
 }) => {
   const { openConnectModal } = useConnectModal()
 
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
 
   const [reaction, setReaction] = useState({
     isLiked: publication.reaction === 'UPVOTE',
@@ -57,7 +55,7 @@ const PublicationReaction: FC<Props> = ({
   })
 
   const likeVideo = () => {
-    if (!selectedChannelId) {
+    if (!selectedSimpleProfile?.id) {
       return openConnectModal?.()
     }
     Analytics.track(TRACK.PUBLICATION.LIKE)
@@ -70,7 +68,7 @@ const PublicationReaction: FC<Props> = ({
       removeReaction({
         variables: {
           request: {
-            profileId: selectedChannel?.id,
+            profileId: selectedSimpleProfile?.id,
             reaction: ReactionTypes.Upvote,
             publicationId: publication.id
           }
@@ -80,7 +78,7 @@ const PublicationReaction: FC<Props> = ({
       addReaction({
         variables: {
           request: {
-            profileId: selectedChannel?.id,
+            profileId: selectedSimpleProfile?.id,
             reaction: ReactionTypes.Upvote,
             publicationId: publication.id
           }
@@ -90,7 +88,7 @@ const PublicationReaction: FC<Props> = ({
   }
 
   const dislikeVideo = () => {
-    if (!selectedChannelId) {
+    if (!selectedSimpleProfile?.id) {
       return openConnectModal?.()
     }
     Analytics.track(TRACK.PUBLICATION.DISLIKE)
@@ -103,7 +101,7 @@ const PublicationReaction: FC<Props> = ({
       removeReaction({
         variables: {
           request: {
-            profileId: selectedChannel?.id,
+            profileId: selectedSimpleProfile?.id,
             reaction: ReactionTypes.Downvote,
             publicationId: publication.id
           }
@@ -113,7 +111,7 @@ const PublicationReaction: FC<Props> = ({
       addReaction({
         variables: {
           request: {
-            profileId: selectedChannel?.id,
+            profileId: selectedSimpleProfile?.id,
             reaction: ReactionTypes.Downvote,
             publicationId: publication.id
           }
@@ -126,9 +124,7 @@ const PublicationReaction: FC<Props> = ({
     <div
       className={clsx(
         'flex items-center justify-end',
-        isVertical
-          ? 'flex-col space-y-2.5 px-3 md:space-y-4'
-          : 'space-x-2.5 md:space-x-5'
+        isVertical ? 'flex-col space-y-2.5 px-3 md:space-y-4' : 'space-x-5'
       )}
     >
       <button

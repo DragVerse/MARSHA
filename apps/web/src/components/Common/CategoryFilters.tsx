@@ -1,10 +1,9 @@
+import { Analytics, TRACK, useHorizontalScroll } from '@lenstube/browser'
+import { CREATOR_VIDEO_CATEGORIES } from '@lenstube/constants'
 import useAppStore from '@lib/store'
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
 import React, { useEffect, useState } from 'react'
-import { Analytics, TRACK } from 'utils'
-import { CREATOR_VIDEO_CATEGORIES } from 'utils/data/categories'
-import useHorizontalScroll from 'utils/hooks/useHorizontalScroll'
 
 import ChevronLeftOutline from './Icons/ChevronLeftOutline'
 import ChevronRightOutline from './Icons/ChevronRightOutline'
@@ -57,7 +56,7 @@ const CategoryFilters = () => {
 
   return (
     <div
-      className="ultrawide:max-w-[110rem] relative mx-auto flex pt-4"
+      className="ultrawide:max-w-[90rem] relative mx-auto flex pt-4"
       data-testid="category-filters"
     >
       {scrollX !== 0 && (

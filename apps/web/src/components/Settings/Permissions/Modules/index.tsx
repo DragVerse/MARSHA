@@ -1,20 +1,20 @@
 import { Button } from '@components/UIElements/Button'
-import { Loader } from '@components/UIElements/Loader'
-import useChannelStore from '@lib/store/channel'
-import { t, Trans } from '@lingui/macro'
-import type { ApprovedAllowanceAmount, Erc20 } from 'lens'
+import { WMATIC_TOKEN_ADDRESS } from '@lenstube/constants'
+import type { ApprovedAllowanceAmount, Erc20 } from '@lenstube/lens'
 import {
   CollectModules,
   FollowModules,
   ReferenceModules,
   useApprovedModuleAllowanceAmountQuery,
   useGenerateModuleCurrencyApprovalDataLazyQuery
-} from 'lens'
+} from '@lenstube/lens'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
+import { Loader } from '@lenstube/ui'
+import { getCollectModuleConfig } from '@lib/getCollectModule'
+import useAuthPersistStore from '@lib/store/auth'
+import { t, Trans } from '@lingui/macro'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
-import type { CustomErrorWithData } from 'utils'
-import { WMATIC_TOKEN_ADDRESS } from 'utils'
-import { getCollectModuleConfig } from 'utils/functions/getCollectModule'
 import { useSendTransaction, useWaitForTransaction } from 'wagmi'
 
 const collectModules = [
@@ -24,17 +24,18 @@ const collectModules = [
   'LimitedFeeCollectModule',
   'LimitedTimedFeeCollectModule',
   'MultirecipientFeeCollectModule',
-  'AaveFeeCollectModule'
+  'AaveFeeCollectModule',
+  'SimpleCollectModule'
 ]
 
 const ModulePermissions = () => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
   const [currency, setCurrency] = useState(WMATIC_TOKEN_ADDRESS)
   const [loadingModule, setLoadingModule] = useState('')
 
   const { data: txData, sendTransaction } = useSendTransaction({
-    request: {},
-    mode: 'recklesslyUnprepared',
     onError(error: CustomErrorWithData) {
       toast.error(error?.data?.message ?? error?.message)
       setLoadingModule('')
@@ -58,12 +59,13 @@ const ModulePermissions = () => {
           CollectModules.TimedFeeCollectModule,
           CollectModules.RevertCollectModule,
           CollectModules.MultirecipientFeeCollectModule,
-          CollectModules.AaveFeeCollectModule
+          CollectModules.AaveFeeCollectModule,
+          CollectModules.SimpleCollectModule
         ],
         referenceModules: [ReferenceModules.FollowerOnlyReferenceModule]
       }
     },
-    skip: !selectedChannel?.id
+    skip: !selectedSimpleProfile?.id
   })
   useWaitForTransaction({
     hash: txData?.hash,
@@ -95,11 +97,8 @@ const ModulePermissions = () => {
       })
       const generated = allowanceData?.generateModuleCurrencyApprovalData
       sendTransaction?.({
-        recklesslySetUnpreparedRequest: {
-          from: generated?.from,
-          to: generated?.to,
-          data: generated?.data
-        }
+        to: generated?.to,
+        data: generated?.data
       })
     } catch {
       setLoadingModule('')

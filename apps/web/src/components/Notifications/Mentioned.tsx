@@ -1,11 +1,11 @@
-import IsVerified from '@components/Common/IsVerified'
+import Badge from '@components/Common/Badge'
+import { getProfilePicture, trimLensHandle } from '@lenstube/generic'
+import type { NewMentionNotification } from '@lenstube/lens'
+import { getRelativeTime } from '@lib/formatTime'
 import { Trans } from '@lingui/macro'
-import type { NewMentionNotification } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
-import { getRelativeTime } from 'utils/functions/formatTime'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
 interface Props {
   notification: NewMentionNotification
@@ -16,21 +16,27 @@ const MentionedNotification: FC<Props> = ({ notification }) => {
     <>
       <div className="flex items-center space-x-3">
         <Link
-          href={`/channel/${notification?.mentionPublication?.profile?.handle}`}
+          href={`/channel/${trimLensHandle(
+            notification?.mentionPublication?.profile?.handle
+          )}`}
           className="font-base inline-flex items-center space-x-1.5"
         >
           <img
             className="h-5 w-5 rounded-full"
             src={getProfilePicture(
               notification?.mentionPublication.profile,
-              'avatar'
+              'AVATAR'
             )}
             alt={notification?.mentionPublication?.profile?.handle}
             draggable={false}
           />
           <div className="flex items-center space-x-0.5">
-            <span>{notification?.mentionPublication?.profile?.handle}</span>
-            <IsVerified
+            <span>
+              {trimLensHandle(
+                notification?.mentionPublication?.profile?.handle
+              )}
+            </span>
+            <Badge
               id={notification?.mentionPublication?.profile?.id}
               size="xs"
             />

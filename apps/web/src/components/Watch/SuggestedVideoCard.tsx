@@ -1,22 +1,27 @@
-import IsVerified from '@components/Common/IsVerified'
+import Badge from '@components/Common/Badge'
 import ReportModal from '@components/Common/VideoCard/ReportModal'
 import ShareModal from '@components/Common/VideoCard/ShareModal'
 import VideoOptions from '@components/Common/VideoCard/VideoOptions'
+import { useAverageColor } from '@lenstube/browser'
+import {
+  FALLBACK_COVER_URL,
+  LENSTUBE_BYTES_APP_ID,
+  STATIC_ASSETS
+} from '@lenstube/constants'
+import {
+  getIsSensitiveContent,
+  getThumbnailUrl,
+  getValueFromTraitType,
+  imageCdn,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Attribute, Publication } from '@lenstube/lens'
+import { getRelativeTime, getTimeFromSeconds } from '@lib/formatTime'
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
-import type { Attribute, Publication } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React, { useState } from 'react'
-import { FALLBACK_COVER_URL, LENSTUBE_BYTES_APP_ID, STATIC_ASSETS } from 'utils'
-import { getRelativeTime, getTimeFromSeconds } from 'utils/functions/formatTime'
-import { generateVideoThumbnail } from 'utils/functions/generateVideoThumbnails'
-import { getValueFromTraitType } from 'utils/functions/getFromAttributes'
-import { getIsSensitiveContent } from 'utils/functions/getIsSensitiveContent'
-import { getPublicationMediaUrl } from 'utils/functions/getPublicationMediaUrl'
-import getThumbnailUrl from 'utils/functions/getThumbnailUrl'
-import imageCdn from 'utils/functions/imageCdn'
-import useAverageColor from 'utils/hooks/useAverageColor'
 
 type Props = {
   video: Publication
@@ -62,22 +67,15 @@ const SuggestedVideoCard: FC<Props> = ({ video }) => {
                   thumbnailUrl
                     ? imageCdn(
                         thumbnailUrl,
-                        isBytesVideo ? 'thumbnail_v' : 'thumbnail'
+                        isBytesVideo ? 'THUMBNAIL_V' : 'THUMBNAIL'
                       )
                     : ''
                 }
                 style={{ backgroundColor: `${backgroundColor}95` }}
                 alt="thumbnail"
                 draggable={false}
-                onError={async ({ currentTarget }) => {
+                onError={({ currentTarget }) => {
                   currentTarget.src = FALLBACK_COVER_URL
-                  const thumbnail = await generateVideoThumbnail(
-                    getPublicationMediaUrl(video)
-                  )
-                  currentTarget.onerror = null
-                  if (thumbnail?.includes('base64')) {
-                    currentTarget.src = thumbnail
-                  }
                 }}
               />
               {!isSensitiveContent && videoDuration ? (
@@ -103,12 +101,12 @@ const SuggestedVideoCard: FC<Props> = ({ video }) => {
             </div>
             <div className="truncate">
               <Link
-                href={`/channel/${video.profile?.handle}`}
+                href={`/channel/${trimLensHandle(video.profile?.handle)}`}
                 className="truncate text-[13px] opacity-70 hover:opacity-100"
               >
                 <div className="flex items-center space-x-0.5">
-                  <span>{video?.profile?.handle}</span>
-                  <IsVerified id={video?.profile.id} size="xs" />
+                  <span>{trimLensHandle(video?.profile?.handle)}</span>
+                  <Badge id={video?.profile.id} size="xs" />
                 </div>
               </Link>
             </div>

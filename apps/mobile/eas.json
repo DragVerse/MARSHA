@@ -1,0 +1,22 @@
+{
+  "cli": {
+    "version": ">= 3.15.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "LENS_ENV": "mainnet"
+      }
+    },
+    "production": {
+      "env": {
+        "LENS_ENV": "mainnet"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

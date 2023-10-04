@@ -1,39 +1,36 @@
+import Badge from '@components/Common/Badge'
 import ChevronDownOutline from '@components/Common/Icons/ChevronDownOutline'
 import ChevronUpOutline from '@components/Common/Icons/ChevronUpOutline'
 import HeartOutline from '@components/Common/Icons/HeartOutline'
 import ReplyOutline from '@components/Common/Icons/ReplyOutline'
 import InterweaveContent from '@components/Common/InterweaveContent'
-import IsVerified from '@components/Common/IsVerified'
 import HashExplorerLink from '@components/Common/Links/HashExplorerLink'
 import ReportModal from '@components/Common/VideoCard/ReportModal'
 import Tooltip from '@components/UIElements/Tooltip'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import {
+  checkValueInAttributes,
+  getProfilePicture,
+  getValueFromTraitType,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Attribute, Publication } from '@lenstube/lens'
+import { getRelativeTime } from '@lib/formatTime'
 import useAuthPersistStore from '@lib/store/auth'
 import usePersistStore from '@lib/store/persist'
 import { t, Trans } from '@lingui/macro'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
 import clsx from 'clsx'
-import type { Attribute, Publication } from 'lens'
-import { PublicationMainFocus } from 'lens'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React, { useEffect, useState } from 'react'
-import { getRelativeTime } from 'utils/functions/formatTime'
-import {
-  checkValueInAttributes,
-  getValueFromTraitType
-} from 'utils/functions/getFromAttributes'
-import getLensHandle from 'utils/functions/getLensHandle'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
-import CommentImages from './CommentImages'
+import PublicationReaction from '../PublicationReaction'
+import CommentMedia from './CommentMedia'
+import CommentOptions from './CommentOptions'
 import CommentReplies from './CommentReplies'
 import NewComment from './NewComment'
 import QueuedComment from './QueuedComment'
-import VideoComment from './VideoComment'
-
-const CommentOptions = dynamic(() => import('./CommentOptions'))
-const PublicationReaction = dynamic(() => import('../PublicationReaction'))
 
 interface Props {
   comment: Publication
@@ -47,10 +44,11 @@ const Comment: FC<Props> = ({ comment }) => {
   const [showReplies, setShowReplies] = useState(false)
   const [defaultComment, setDefaultComment] = useState('')
   const { openConnectModal } = useConnectModal()
+  const handleWrongNetwork = useHandleWrongNetwork()
 
   const queuedComments = usePersistStore((state) => state.queuedComments)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
 
   useEffect(() => {
@@ -60,10 +58,6 @@ const Comment: FC<Props> = ({ comment }) => {
     }
   }, [comment?.metadata?.content])
 
-  const getIsVideoComment = () => {
-    return comment.metadata.mainContentFocus === PublicationMainFocus.Video
-  }
-
   const getIsReplyQueuedComment = () => {
     return Boolean(queuedComments.filter((c) => c.pubId === comment.id)?.length)
   }
@@ -72,11 +66,11 @@ const Comment: FC<Props> = ({ comment }) => {
     <div className="flex items-start justify-between">
       <div className="flex w-full items-start">
         <Link
-          href={`/channel/${comment.profile?.handle}`}
+          href={`/channel/${trimLensHandle(comment.profile?.handle)}`}
           className="mr-3 mt-0.5 flex-none"
         >
           <img
-            src={getProfilePicture(comment.profile, 'avatar')}
+            src={getProfilePicture(comment.profile, 'AVATAR')}
             className="h-7 w-7 rounded-full"
             draggable={false}
             alt={comment.profile?.handle}
@@ -85,11 +79,11 @@ const Comment: FC<Props> = ({ comment }) => {
         <div className="mr-2 flex w-full flex-col items-start">
           <span className="mb-1 flex items-center space-x-2">
             <Link
-              href={`/channel/${comment.profile?.handle}`}
+              href={`/channel/${trimLensHandle(comment.profile?.handle)}`}
               className="flex items-center space-x-1 text-sm font-medium"
             >
-              <span>{comment?.profile?.handle}</span>
-              <IsVerified id={comment?.profile.id} />
+              <span>{trimLensHandle(comment?.profile?.handle)}</span>
+              <Badge id={comment?.profile.id} />
             </Link>
             {checkValueInAttributes(
               comment?.metadata.attributes as Attribute[],
@@ -115,11 +109,7 @@ const Comment: FC<Props> = ({ comment }) => {
             </span>
           </span>
           <div className={clsx({ 'line-clamp-2': clamped })}>
-            {getIsVideoComment() ? (
-              <VideoComment comment={comment} />
-            ) : (
-              <InterweaveContent content={comment?.metadata?.content} />
-            )}
+            <InterweaveContent content={comment?.metadata?.content} />
           </div>
           {showMore && (
             <div className="mt-3 inline-flex">
@@ -142,14 +132,17 @@ const Comment: FC<Props> = ({ comment }) => {
               </button>
             </div>
           )}
-          <CommentImages images={comment.metadata.media} />
+          <CommentMedia comment={comment} />
           {!comment.hidden && (
             <div className="mt-2 flex items-center space-x-4">
               <PublicationReaction publication={comment} />
               <button
                 onClick={() => {
-                  if (!selectedChannelId) {
+                  if (!selectedSimpleProfile?.id) {
                     return openConnectModal?.()
+                  }
+                  if (handleWrongNetwork()) {
+                    return
                   }
                   setShowNewComment(!showNewComment)
                   setDefaultComment('')
@@ -191,11 +184,14 @@ const Comment: FC<Props> = ({ comment }) => {
               <CommentReplies
                 comment={comment}
                 replyTo={(profile) => {
-                  if (!selectedChannelId) {
+                  if (!selectedSimpleProfile?.id) {
                     return openConnectModal?.()
                   }
+                  if (handleWrongNetwork()) {
+                    return
+                  }
                   setShowNewComment(true)
-                  setDefaultComment(`@${getLensHandle(profile.handle)} `)
+                  setDefaultComment(`@${profile.handle} `)
                 }}
               />
             )}

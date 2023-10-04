@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import { Head, Html, Main, NextScript } from 'next/document'
 import React from 'react'
 import { FALLBACK_COVER_URL } from 'utils'
+=======
+import { STATIC_ASSETS } from '@lenstube/constants'
+import Document, { Head, Html, Main, NextScript } from 'next/document'
+import React from 'react'
+>>>>>>> upstream/main
 
 const DragverseDocument: React.FC = () => {
   return (

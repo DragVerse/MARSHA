@@ -1,14 +1,14 @@
 import Modal from '@components/UIElements/Modal'
+import { Analytics, TRACK, useCopyToClipboard } from '@lenstube/browser'
+import { LENSTUBE_WEBSITE_URL, STATIC_ASSETS } from '@lenstube/constants'
+import { getSharableLink, imageCdn } from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import { t } from '@lingui/macro'
-import type { Publication } from 'lens'
 import Link from 'next/link'
+import { useTheme } from 'next-themes'
 import type { FC } from 'react'
 import React from 'react'
 import toast from 'react-hot-toast'
-import { Analytics, LENSTUBE_WEBSITE_URL, STATIC_ASSETS, TRACK } from 'utils'
-import { getSharableLink } from 'utils/functions/getSharableLink'
-import imageCdn from 'utils/functions/imageCdn'
-import useCopyToClipboard from 'utils/hooks/useCopyToClipboard'
 
 import EmbedVideo from '../EmbedVideo'
 import CopyOutline from '../Icons/CopyOutline'
@@ -23,6 +23,7 @@ type Props = {
 
 const ShareModal: FC<Props> = ({ show, setShowShare, video }) => {
   const [copy] = useCopyToClipboard()
+  const { resolvedTheme } = useTheme()
 
   const onCopyVideoUrl = async () => {
     await copy(`${LENSTUBE_WEBSITE_URL}/watch/${video.id}`)
@@ -52,17 +53,17 @@ const ShareModal: FC<Props> = ({ show, setShowShare, video }) => {
             className="rounded-full"
             target="_blank"
             rel="noreferrer"
-            onClick={() => Analytics.track(TRACK.PUBLICATION.SHARE.LENSTER)}
-            href={getSharableLink('lenster', video)}
+            onClick={() => Analytics.track(TRACK.PUBLICATION.SHARE.HEY)}
+            href={getSharableLink('hey', video)}
           >
             <img
               src={imageCdn(
-                `${STATIC_ASSETS}/images/lenster-logo.svg`,
-                'avatar_lg'
+                `${STATIC_ASSETS}/images/social/hey-logo.svg`,
+                'AVATAR_LG'
               )}
               className="h-10 w-10 max-w-none rounded-full"
               loading="eager"
-              alt="lenster"
+              alt="hey"
               draggable={false}
             />
           </Link>
@@ -71,19 +72,36 @@ const ShareModal: FC<Props> = ({ show, setShowShare, video }) => {
             className="rounded-full"
             target="_blank"
             rel="noreferrer"
-            href={getSharableLink('twitter', video)}
-            onClick={() => Analytics.track(TRACK.PUBLICATION.SHARE.TWITTER)}
+            href={getSharableLink('x', video)}
+            onClick={() => Analytics.track(TRACK.PUBLICATION.SHARE.X)}
           >
-            <img
-              src={imageCdn(
-                `${STATIC_ASSETS}/images/social/twitter-logo.png`,
-                'avatar_lg'
+            <div className="rounded-full bg-gray-200 p-3 dark:bg-gray-800">
+              {resolvedTheme === 'dark' ? (
+                <img
+                  src={imageCdn(
+                    `${STATIC_ASSETS}/images/social/x-white.png`,
+                    'AVATAR'
+                  )}
+                  className="h-4 w-4"
+                  height={16}
+                  width={16}
+                  alt="X Logo"
+                  draggable={false}
+                />
+              ) : (
+                <img
+                  src={imageCdn(
+                    `${STATIC_ASSETS}/images/social/x-black.png`,
+                    'AVATAR'
+                  )}
+                  className="h-4 w-4"
+                  height={16}
+                  width={16}
+                  alt="X Logo"
+                  draggable={false}
+                />
               )}
-              loading="eager"
-              className="h-10 w-10 max-w-none rounded-full"
-              alt="twitter"
-              draggable={false}
-            />
+            </div>
           </Link>
           <Link
             href={getSharableLink('reddit', video)}
@@ -94,7 +112,7 @@ const ShareModal: FC<Props> = ({ show, setShowShare, video }) => {
             <img
               src={imageCdn(
                 `${STATIC_ASSETS}/images/social/reddit-logo.webp`,
-                'avatar_lg'
+                'AVATAR_LG'
               )}
               className="h-10 w-10 max-w-none rounded-full"
               loading="eager"
@@ -111,7 +129,7 @@ const ShareModal: FC<Props> = ({ show, setShowShare, video }) => {
             <img
               src={imageCdn(
                 `${STATIC_ASSETS}/images/social/linkedin-logo.png`,
-                'avatar_lg'
+                'AVATAR_LG'
               )}
               loading="eager"
               alt="linkedin"

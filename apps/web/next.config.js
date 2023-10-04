@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const headers = [{ key: 'Cache-Control', value: 'public, max-age=3600' }]
 const moduleExports = {
-  transpilePackages: ['lens', 'utils', 'web-ui'],
+  transpilePackages: [
+    '@lenstube/lens',
+    '@lenstube/browser',
+    '@lenstube/generic',
+    '@lenstube/ui'
+  ],
   reactStrictMode: process.env.NODE_ENV === 'production',
   experimental: {
     scrollRestoration: true,
@@ -27,19 +32,29 @@ const moduleExports = {
   async redirects() {
     return [
       {
+        source: '/channel/:handle(.+).lens',
+        destination: '/channel/:handle',
+        permanent: true
+      },
+      {
+        source: '/channel/:handle(.+).test',
+        destination: '/channel/:handle',
+        permanent: true
+      },
+      {
         source: '/discord',
         destination: 'https://discord.com/servers/lenstube-980882088783913010',
         permanent: true
       },
       {
         source: '/donate',
-        destination: 'https://bounties.gitcoin.co/grants/6972/lenstube',
+        destination: 'https://giveth.io/project/lenstube',
         permanent: true
       },
       {
         source: '/gitcoin',
         destination:
-          'https://explorer.gitcoin.co/#/round/1/0x12bb5bbbfe596dbc489d209299b8302c3300fa40/0x12bb5bbbfe596dbc489d209299b8302c3300fa40-10',
+          'https://explorer.gitcoin.co/#/round/10/0x8de918f0163b2021839a8d84954dd7e8e151326d/0x8de918f0163b2021839a8d84954dd7e8e151326d-3',
         permanent: true
       }
     ]

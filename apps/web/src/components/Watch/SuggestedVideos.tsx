@@ -1,30 +1,34 @@
 import { SuggestedVideosShimmer } from '@components/Shimmers/VideoDetailShimmer'
-import { Loader } from '@components/UIElements/Loader'
-import type { Publication } from 'lens'
+import {
+  ALLOWED_APP_IDS,
+  IS_MAINNET,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_BYTES_APP_ID,
+  SCROLL_ROOT_MARGIN
+} from '@lenstube/constants'
+import type { Publication } from '@lenstube/lens'
 import {
   PublicationMainFocus,
   PublicationSortCriteria,
   PublicationTypes,
   useExploreQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
 import { useRouter } from 'next/router'
 import type { FC } from 'react'
 import React, { useEffect } from 'react'
 import { useInView } from 'react-cool-inview'
-import {
-  ALLOWED_APP_IDS,
-  LENS_CUSTOM_FILTERS,
-  LENSTUBE_APP_ID,
-  LENSTUBE_BYTES_APP_ID,
-  SCROLL_ROOT_MARGIN
-} from 'utils'
 
 import SuggestedVideoCard from './SuggestedVideoCard'
 
 const request = {
   sortCriteria: PublicationSortCriteria.CuratedProfiles,
   limit: 30,
-  sources: [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS],
+  sources: IS_MAINNET
+    ? [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS]
+    : undefined,
   publicationTypes: [PublicationTypes.Post],
   metadata: { mainContentFocus: [PublicationMainFocus.Video] },
   noRandomize: false,
@@ -35,9 +39,15 @@ const SuggestedVideos: FC = () => {
   const {
     query: { id }
   } = useRouter()
+
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
+
   const { data, loading, error, fetchMore, refetch } = useExploreQuery({
     variables: {
-      request
+      request,
+      channelId: selectedSimpleProfile?.id ?? null
     }
   })
 
@@ -56,7 +66,8 @@ const SuggestedVideos: FC = () => {
           request: {
             ...request,
             cursor: pageInfo?.next
-          }
+          },
+          channelId: selectedSimpleProfile?.id ?? null
         }
       })
     }

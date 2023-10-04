@@ -1,14 +1,18 @@
+import { useAverageColor } from '@lenstube/browser'
+import {
+  FALLBACK_COVER_URL,
+  LENSTUBE_BYTES_APP_ID,
+  STATIC_ASSETS
+} from '@lenstube/constants'
+import {
+  getIsSensitiveContent,
+  getThumbnailUrl,
+  imageCdn
+} from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import clsx from 'clsx'
-import type { Publication } from 'lens'
 import type { FC } from 'react'
 import React from 'react'
-import { FALLBACK_COVER_URL, LENSTUBE_BYTES_APP_ID, STATIC_ASSETS } from 'utils'
-import { generateVideoThumbnail } from 'utils/functions/generateVideoThumbnails'
-import { getIsSensitiveContent } from 'utils/functions/getIsSensitiveContent'
-import { getPublicationMediaUrl } from 'utils/functions/getPublicationMediaUrl'
-import getThumbnailUrl from 'utils/functions/getThumbnailUrl'
-import imageCdn from 'utils/functions/imageCdn'
-import useAverageColor from 'utils/hooks/useAverageColor'
 
 type Props = {
   video: Publication
@@ -20,18 +24,14 @@ const ThumbnailImage: FC<Props> = ({ video }) => {
 
   const thumbnailUrl = isSensitiveContent
     ? `${STATIC_ASSETS}/images/sensor-blur.png`
-    : getThumbnailUrl(video)
+    : getThumbnailUrl(video, true)
   const { color: backgroundColor } = useAverageColor(thumbnailUrl, isBytesVideo)
 
   return (
     <img
-      src={
-        thumbnailUrl
-          ? imageCdn(thumbnailUrl, isBytesVideo ? 'thumbnail_v' : 'thumbnail')
-          : ''
-      }
+      src={imageCdn(thumbnailUrl, isBytesVideo ? 'THUMBNAIL_V' : 'THUMBNAIL')}
       className={clsx(
-        'h-full w-full bg-gray-100 object-center dark:bg-gray-900 md:rounded-xl lg:h-full lg:w-full',
+        'h-full w-full rounded-xl bg-gray-100 object-center dark:bg-gray-900 lg:h-full lg:w-full',
         isBytesVideo ? 'object-contain' : 'object-cover'
       )}
       style={{
@@ -39,15 +39,15 @@ const ThumbnailImage: FC<Props> = ({ video }) => {
       }}
       alt="thumbnail"
       draggable={false}
-      onError={async ({ currentTarget }) => {
+      onError={({ currentTarget }) => {
         currentTarget.src = FALLBACK_COVER_URL
-        const thumbnail = await generateVideoThumbnail(
-          getPublicationMediaUrl(video)
-        )
-        currentTarget.onerror = null
-        if (thumbnail?.includes('base64')) {
-          currentTarget.src = thumbnail
-        }
+        // const thumbnail = await generateVideoThumbnail(
+        //   getPublicationMediaUrl(video)
+        // )
+        // currentTarget.onerror = null
+        // if (thumbnail?.includes('base64')) {
+        //   currentTarget.src = thumbnail
+        // }
       }}
     />
   )

@@ -1,13 +1,12 @@
 import OtherChannelsShimmer from '@components/Shimmers/OtherChannelsShimmer'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
+import type { Profile } from '@lenstube/lens'
+import { useAllProfilesQuery } from '@lenstube/lens'
 import { t } from '@lingui/macro'
-import type { Profile } from 'lens'
-import { useAllProfilesQuery } from 'lens'
-import dynamic from 'next/dynamic'
 import type { FC } from 'react'
 import React from 'react'
 
-const OtherChannelCard = dynamic(() => import('./OtherChannelCard'))
+import OtherChannelCard from './OtherChannelCard'
 
 type Props = {
   channel: Profile

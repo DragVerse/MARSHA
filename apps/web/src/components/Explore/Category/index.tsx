@@ -1,38 +1,45 @@
 import MetaTags from '@components/Common/MetaTags'
 import Timeline from '@components/Home/Timeline'
 import TimelineShimmer from '@components/Shimmers/TimelineShimmer'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
-import { t } from '@lingui/macro'
-import type { Publication } from 'lens'
+import {
+  ALLOWED_APP_IDS,
+  IS_MAINNET,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_BYTES_APP_ID,
+  SCROLL_ROOT_MARGIN
+} from '@lenstube/constants'
+import { getCategoryName } from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import {
   PublicationMainFocus,
   PublicationSortCriteria,
   PublicationTypes,
   useExploreQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
+import { t } from '@lingui/macro'
 import { useRouter } from 'next/router'
 import React from 'react'
 import { useInView } from 'react-cool-inview'
 import Custom404 from 'src/pages/404'
-import {
-  ALLOWED_APP_IDS,
-  LENS_CUSTOM_FILTERS,
-  LENSTUBE_APP_ID,
-  LENSTUBE_BYTES_APP_ID,
-  SCROLL_ROOT_MARGIN
-} from 'utils'
-import getCategoryName from 'utils/functions/getCategoryName'
 
 const ExploreCategory = () => {
   const { query } = useRouter()
   const categoryName = query.category as string
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const request = {
     publicationTypes: [PublicationTypes.Post],
     limit: 32,
     sortCriteria: PublicationSortCriteria.Latest,
-    sources: [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS],
+    sources: IS_MAINNET
+      ? [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS]
+      : undefined,
     customFilters: LENS_CUSTOM_FILTERS,
     metadata: {
       tags: { oneOf: [categoryName] },
@@ -42,7 +49,8 @@ const ExploreCategory = () => {
 
   const { data, loading, error, fetchMore } = useExploreQuery({
     variables: {
-      request
+      request,
+      channelId: selectedSimpleProfile?.id ?? null
     },
     skip: !query.category
   })
@@ -58,7 +66,8 @@ const ExploreCategory = () => {
           request: {
             cursor: pageInfo?.next,
             ...request
-          }
+          },
+          channelId: selectedSimpleProfile?.id ?? null
         }
       })
     }

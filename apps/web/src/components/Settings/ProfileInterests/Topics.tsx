@@ -1,20 +1,20 @@
-import { useApolloClient } from '@apollo/client'
-import { Loader } from '@components/UIElements/Loader'
-import useChannelStore from '@lib/store/channel'
-import clsx from 'clsx'
+import { Analytics, TRACK } from '@lenstube/browser'
+import { sanitizeProfileInterests } from '@lenstube/generic'
 import {
   useAddProfileInterestMutation,
   useProfileInterestsQuery,
   useRemoveProfileInterestMutation
-} from 'lens'
+} from '@lenstube/lens'
+import { useApolloClient } from '@lenstube/lens/apollo'
+import { Loader } from '@lenstube/ui'
+import useChannelStore from '@lib/store/channel'
+import clsx from 'clsx'
 import React, { useEffect } from 'react'
-import { Analytics, TRACK } from 'utils'
-import sanitizeProfileInterests from 'utils/functions/sanitizeProfileInterests'
 
 const MAX_TOPICS_ALLOWED = 12
 
 const Topics = () => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const activeChannel = useChannelStore((state) => state.activeChannel)
 
   useEffect(() => {
     Analytics.track(TRACK.PROFILE_INTERESTS.VIEW)
@@ -27,19 +27,19 @@ const Topics = () => {
 
   const updateCache = (interests: string[]) => {
     cache.modify({
-      id: `Profile:${selectedChannel?.id}`,
+      id: `Profile:${activeChannel?.id}`,
       fields: { interests: () => interests }
     })
   }
 
   const interestsData = (data?.profileInterests as string[]) || []
-  const selectedTopics = selectedChannel?.interests ?? []
+  const selectedTopics = activeChannel?.interests ?? []
 
   const onSelectTopic = (topic: string) => {
     try {
       const variables = {
         request: {
-          profileId: selectedChannel?.id,
+          profileId: activeChannel?.id,
           interests: [topic]
         }
       }
@@ -82,26 +82,28 @@ const Topics = () => {
               >
                 {category.label}
               </button>
-              {subCategories?.map((subCategory) => (
-                <button
-                  type="button"
-                  disabled={
-                    !selectedTopics.includes(subCategory.id) &&
-                    selectedTopics.length === MAX_TOPICS_ALLOWED
-                  }
-                  className={clsx(
-                    'flex items-center justify-between rounded-full border border-gray-300 px-3 py-0.5 text-sm capitalize focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700',
-                    {
-                      '!border-indigo-500 text-indigo-500':
-                        selectedTopics.includes(subCategory.id)
+              {subCategories?.map(
+                (subCategory: { id: string; label: string }) => (
+                  <button
+                    type="button"
+                    disabled={
+                      !selectedTopics.includes(subCategory.id) &&
+                      selectedTopics.length === MAX_TOPICS_ALLOWED
                     }
-                  )}
-                  key={subCategory.id}
-                  onClick={() => onSelectTopic(subCategory.id)}
-                >
-                  {subCategory.label}
-                </button>
-              ))}
+                    className={clsx(
+                      'flex items-center justify-between rounded-full border border-gray-300 px-3 py-0.5 text-sm capitalize focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700',
+                      {
+                        '!border-indigo-500 text-indigo-500':
+                          selectedTopics.includes(subCategory.id)
+                      }
+                    )}
+                    key={subCategory.id}
+                    onClick={() => onSelectTopic(subCategory.id)}
+                  >
+                    {subCategory.label}
+                  </button>
+                )
+              )}
             </div>
           </div>
         )

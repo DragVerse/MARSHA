@@ -2,16 +2,20 @@ import InfoOutline from '@components/Common/Icons/InfoOutline'
 import TimesOutline from '@components/Common/Icons/TimesOutline'
 import { Input } from '@components/UIElements/Input'
 import Tooltip from '@components/UIElements/Tooltip'
+import {
+  IS_MAINNET,
+  LENSTUBE_ADDRESS,
+  LENSTUBE_APP_NAME
+} from '@lenstube/constants'
+import { splitNumber } from '@lenstube/generic'
+import type { RecipientDataInput } from '@lenstube/lens'
+import { useResolveProfileAddressLazyQuery } from '@lenstube/lens'
 import useAppStore from '@lib/store'
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
-import { utils } from 'ethers'
-import type { RecipientDataInput } from 'lens'
-import { useResolveProfileAddressLazyQuery } from 'lens'
 import type { FC, RefObject } from 'react'
 import React from 'react'
-import { IS_MAINNET, LENSTUBE_APP_NAME, LENSTUBE_DONATION_ADDRESS } from 'utils'
-import splitNumber from 'utils/functions/splitNumber'
+import { isAddress } from 'viem'
 
 type Props = {
   submitContainerRef: RefObject<HTMLDivElement>
@@ -36,10 +40,9 @@ const Splits: FC<Props> = ({ submitContainerRef }) => {
     })
   }
 
-  const getIsValidAddress = (address: string) => utils.isAddress(address)
+  const getIsValidAddress = (address: string) => isAddress(address)
   const isIncludesDonationAddress =
-    splitRecipients.filter((el) => el.recipient === LENSTUBE_DONATION_ADDRESS)
-      .length > 0
+    splitRecipients.filter((el) => el.recipient === LENSTUBE_ADDRESS).length > 0
   const getIsHandle = (value: string) => {
     return IS_MAINNET && value === 'lensprotocol'
       ? true
@@ -89,7 +92,7 @@ const Splits: FC<Props> = ({ submitContainerRef }) => {
 
   const addDonation = () => {
     const splits = splitRecipients
-    splits.push({ recipient: LENSTUBE_DONATION_ADDRESS, split: 2 })
+    splits.push({ recipient: LENSTUBE_ADDRESS, split: 2 })
     setSplitRecipients([...splits])
     scrollToSubmit()
   }
@@ -143,11 +146,11 @@ const Splits: FC<Props> = ({ submitContainerRef }) => {
             autoComplete="off"
             spellCheck="false"
             suffix={
-              splitRecipient.recipient === LENSTUBE_DONATION_ADDRESS
+              splitRecipient.recipient === LENSTUBE_ADDRESS
                 ? LENSTUBE_APP_NAME
                 : ''
             }
-            disabled={splitRecipient.recipient === LENSTUBE_DONATION_ADDRESS}
+            disabled={splitRecipient.recipient === LENSTUBE_ADDRESS}
             validationError={
               getIsValidAddress(splitRecipient.recipient) ? '' : ' '
             }
@@ -164,12 +167,12 @@ const Splits: FC<Props> = ({ submitContainerRef }) => {
           </div>
           <button
             type="button"
-            className="rounded-xl border px-1 text-[10px] font-semibold uppercase tracking-wider dark:border-gray-600"
+            className="flex w-10 items-center justify-center rounded-xl border px-1 text-[10px] font-semibold uppercase tracking-wider dark:border-gray-600"
             onClick={() => removeRecipient(i)}
           >
             <TimesOutline
-              className="h-5 w-5 opacity-70 hover:text-red-500"
-              outline={false}
+              className="h-4 w-4 p-1 opacity-70 hover:text-red-500"
+              outlined={false}
             />
           </button>
         </div>

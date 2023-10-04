@@ -1,14 +1,14 @@
 import ChannelCirclesShimmer from '@components/Shimmers/ChannelCirclesShimmer'
 import Modal from '@components/UIElements/Modal'
 import Tooltip from '@components/UIElements/Tooltip'
-import useChannelStore from '@lib/store/channel'
+import { Analytics, TRACK } from '@lenstube/browser'
+import { getProfilePicture } from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
+import { useMutualFollowersQuery } from '@lenstube/lens'
+import useAuthPersistStore from '@lib/store/auth'
 import { t } from '@lingui/macro'
-import type { Profile } from 'lens'
-import { useMutualFollowersQuery } from 'lens'
 import type { FC } from 'react'
 import React, { useState } from 'react'
-import { Analytics, TRACK } from 'utils'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
 import MutualSubscribersList from './MutualSubscribersList'
 type Props = {
@@ -18,7 +18,9 @@ type Props = {
 const FETCH_COUNT = 5
 
 const MutualSubscribers: FC<Props> = ({ viewingChannelId }) => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
   const [showMutualSubscribersModal, setShowMutualSubscribersModal] =
     useState(false)
 
@@ -26,11 +28,11 @@ const MutualSubscribers: FC<Props> = ({ viewingChannelId }) => {
     variables: {
       request: {
         viewingProfileId: viewingChannelId,
-        yourProfileId: selectedChannel?.id,
+        yourProfileId: selectedSimpleProfile?.id,
         limit: FETCH_COUNT
       }
     },
-    skip: !viewingChannelId || !selectedChannel?.id
+    skip: !viewingChannelId || !selectedSimpleProfile?.id
   })
 
   const onClickMutuals = () => {
@@ -56,16 +58,18 @@ const MutualSubscribers: FC<Props> = ({ viewingChannelId }) => {
           className="flex cursor-pointer -space-x-1.5"
           onClick={() => onClickMutuals()}
         >
-          {mutualSubscribers.slice(0, 4)?.map((channel: Profile) => (
-            <img
-              key={channel?.id}
-              title={channel?.handle}
-              className="h-7 w-7 rounded-full border dark:border-gray-700/80"
-              src={getProfilePicture(channel)}
-              draggable={false}
-              alt={channel?.handle}
-            />
-          ))}
+          {mutualSubscribers
+            .slice(0, 4)
+            ?.map((channel: Profile) => (
+              <img
+                key={channel?.id}
+                title={channel?.handle}
+                className="h-7 w-7 rounded-full border dark:border-gray-700/80"
+                src={getProfilePicture(channel)}
+                draggable={false}
+                alt={channel?.handle}
+              />
+            ))}
           {mutualSubscribers.length === FETCH_COUNT && (
             <div className="flex h-7 w-7 flex-none items-center justify-center rounded-full border border-gray-300 bg-gray-200 dark:border-gray-600 dark:bg-gray-800">
               <span role="img" className="text-sm">

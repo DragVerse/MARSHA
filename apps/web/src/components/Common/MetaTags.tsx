@@ -1,15 +1,16 @@
-import Head from 'next/head'
-import { useRouter } from 'next/router'
-import type { FC } from 'react'
-import React from 'react'
 import {
   LENSTUBE_API_URL,
   LENSTUBE_APP_DESCRIPTION,
   LENSTUBE_APP_NAME,
   LENSTUBE_EMBED_URL,
-  LENSTUBE_TWITTER_HANDLE,
-  OG_IMAGE
-} from 'utils'
+  LENSTUBE_X_HANDLE,
+  OG_IMAGE,
+  STATIC_ASSETS
+} from '@lenstube/constants'
+import Head from 'next/head'
+import { useRouter } from 'next/router'
+import type { FC } from 'react'
+import React from 'react'
 
 type Props = {
   title?: string
@@ -56,7 +57,7 @@ const MetaTags: FC<Props> = (props) => {
       <meta name="twitter:title" content={meta.title} />
       <meta name="twitter:description" content={meta.description} />
       <meta property="twitter:image" content={meta.image} />
-      <meta property="twitter:creator" content={LENSTUBE_TWITTER_HANDLE} />
+      <meta property="twitter:creator" content={LENSTUBE_X_HANDLE} />
       {router.pathname === '/watch/[id]' && router.query?.id && (
         <>
           <link
@@ -79,10 +80,8 @@ const MetaTags: FC<Props> = (props) => {
           />
         </>
       )}
-      <link rel="preconnect" href="https://img.lenstube.xyz" />
-      <link rel="dns-prefetch" href="https://img.lenstube.xyz" />
-      <link rel="preconnect" href="https://static.lenstube.xyz" />
-      <link rel="dns-prefetch" href="https://static.lenstube.xyz" />
+      <link rel="preconnect" href={STATIC_ASSETS} />
+      <link rel="dns-prefetch" href={STATIC_ASSETS} />
     </Head>
   )
 }

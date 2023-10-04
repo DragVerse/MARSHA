@@ -1,10 +1,10 @@
 import EmojiOutline from '@components/Common/Icons/EmojiOutline'
 import Picker from '@emoji-mart/react'
+import { STATIC_ASSETS } from '@lenstube/constants'
 import axios from 'axios'
 import { useTheme } from 'next-themes'
 import type { FC } from 'react'
 import React, { useEffect, useState } from 'react'
-import { STATIC_ASSETS } from 'utils'
 
 import DropMenu from './DropMenu'
 
@@ -42,7 +42,6 @@ const EmojiPicker: FC<Props> = ({ onEmojiSelect }) => {
     >
       <div className="pt-2">
         <Picker
-          autoFocus
           data={data}
           navPosition="bottom"
           theme={resolvedTheme}

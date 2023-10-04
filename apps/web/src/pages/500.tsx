@@ -1,8 +1,12 @@
 import { Button } from '@components/UIElements/Button'
+import { STATIC_ASSETS } from '@lenstube/constants'
 import Head from 'next/head'
 import Link from 'next/link'
 import React from 'react'
+<<<<<<< HEAD
 import { FALLBACK_COVER_URL } from 'utils'
+=======
+>>>>>>> upstream/main
 
 const Custom500: React.FC = () => {
   return (

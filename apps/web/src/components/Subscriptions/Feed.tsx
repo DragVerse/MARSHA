@@ -1,25 +1,31 @@
 import VideoCard from '@components/Common/VideoCard'
 import TimelineShimmer from '@components/Shimmers/TimelineShimmer'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
+import { SCROLL_ROOT_MARGIN } from '@lenstube/constants'
+import type { FeedItem, Publication } from '@lenstube/lens'
+import {
+  FeedEventItemType,
+  PublicationMainFocus,
+  useFeedQuery
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
 import useAppStore from '@lib/store'
-import useChannelStore from '@lib/store/channel'
+import useAuthPersistStore from '@lib/store/auth'
 import { t } from '@lingui/macro'
-import type { FeedItem, Publication } from 'lens'
-import { FeedEventItemType, PublicationMainFocus, useFeedQuery } from 'lens'
 import React from 'react'
 import { useInView } from 'react-cool-inview'
 import Custom500 from 'src/pages/500'
-import { SCROLL_ROOT_MARGIN } from 'utils'
 
 const Subscriptions = () => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
   const activeTagFilter = useAppStore((state) => state.activeTagFilter)
 
   const request = {
     limit: 50,
     feedEventItemTypes: [FeedEventItemType.Post],
-    profileId: selectedChannel?.id,
+    profileId: selectedSimpleProfile?.id,
     metadata: {
       tags:
         activeTagFilter !== 'all' ? { oneOf: [activeTagFilter] } : undefined,
@@ -31,7 +37,7 @@ const Subscriptions = () => {
     variables: {
       request
     },
-    skip: !selectedChannel?.id
+    skip: !selectedSimpleProfile?.id
   })
 
   const videos = data?.feed?.items as FeedItem[]
@@ -70,7 +76,7 @@ const Subscriptions = () => {
       {loading && <TimelineShimmer />}
       {!error && !loading && (
         <>
-          <div className="ultrawide:grid-cols-6 laptop:grid-cols-4 grid-col-1 grid gap-x-4 gap-y-2 md:grid-cols-2 md:gap-y-8 2xl:grid-cols-5">
+          <div className="laptop:grid-cols-4 grid-col-1 grid gap-x-4 gap-y-2 md:grid-cols-2 md:gap-y-8 2xl:grid-cols-5">
             {videos?.map((feedItem: FeedItem) => {
               const video = feedItem.root
               return (

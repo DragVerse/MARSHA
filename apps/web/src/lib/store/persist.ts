@@ -1,8 +1,14 @@
 import type {
   QueuedCommentType,
+<<<<<<< HEAD
   QueuedLivestreamVideoType,
   QueuedVideoType
 } from 'utils'
+=======
+  QueuedVideoType
+} from '@lenstube/lens/custom-types'
+import { CustomNotificationsFilterEnum } from '@lenstube/lens/custom-types'
+>>>>>>> upstream/main
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -25,10 +31,16 @@ interface AppPerisistState {
   setSelectedChannelId: (id: string | null) => void
   setQueuedComments: (queuedComments: QueuedCommentType[]) => void
   setQueuedVideos: (queuedVideos: QueuedVideoType[]) => void
+<<<<<<< HEAD
   setQueuedLivestreams: (queuedVideos: QueuedLivestreamVideoType[]) => void
   signIn: (tokens: { accessToken: string; refreshToken: string }) => void
   signOut: () => void
   hydrateAuthTokens: () => Tokens
+=======
+  setSelectedNotificationsFilter: (
+    filter: CustomNotificationsFilterEnum
+  ) => void
+>>>>>>> upstream/main
 }
 
 export const usePersistStore = create(
@@ -48,6 +60,7 @@ export const usePersistStore = create(
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setLatestNotificationId: (latestNotificationId) =>
         set({ latestNotificationId }),
+<<<<<<< HEAD
       setSelectedChannelId: (id) => set({ selectedChannelId: id }),
       signIn: ({ accessToken, refreshToken }) =>
         set({ accessToken, refreshToken }),
@@ -58,6 +71,11 @@ export const usePersistStore = create(
           refreshToken: get().refreshToken
         }
       }
+=======
+      selectedNotificationsFilter: CustomNotificationsFilterEnum.HIGH_SIGNAL,
+      setSelectedNotificationsFilter: (selectedNotificationsFilter) =>
+        set({ selectedNotificationsFilter })
+>>>>>>> upstream/main
     }),
     {
       name: 'dragverse.store'

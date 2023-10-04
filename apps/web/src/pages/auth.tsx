@@ -1,22 +1,30 @@
 import Login from '@components/Common/Auth/Login'
 import MetaTags from '@components/Common/MetaTags'
+import { LENSTUBE_APP_NAME, STATIC_ASSETS } from '@lenstube/constants'
 import useAuthPersistStore from '@lib/store/auth'
 import { t, Trans } from '@lingui/macro'
 import { useRouter } from 'next/router'
 import React, { useEffect } from 'react'
+<<<<<<< HEAD
 import { FALLBACK_COVER_URL, LENSTUBE_APP_NAME } from 'utils'
 
 const AuthRequiredPage: React.FC = () => {
   const selectedChannelId = useAuthPersistStore(
     (state) => state.selectedChannelId
+=======
+
+const AuthRequiredPage = () => {
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+>>>>>>> upstream/main
   )
   const { replace, query } = useRouter()
 
   useEffect(() => {
-    if (selectedChannelId && query?.next) {
+    if (selectedSimpleProfile?.id && query?.next) {
       replace(query?.next as string)
     }
-  }, [selectedChannelId, query, replace])
+  }, [selectedSimpleProfile, query, replace])
 
   return (
     <>

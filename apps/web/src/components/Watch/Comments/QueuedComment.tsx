@@ -1,27 +1,30 @@
-import { useApolloClient } from '@apollo/client'
+import Badge from '@components/Common/Badge'
 import InterweaveContent from '@components/Common/InterweaveContent'
-import IsVerified from '@components/Common/IsVerified'
 import Tooltip from '@components/UIElements/Tooltip'
-import useChannelStore from '@lib/store/channel'
-import usePersistStore from '@lib/store/persist'
+import { getProfilePicture, trimLensHandle } from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
 import {
   PublicationDetailsDocument,
   useHasTxHashBeenIndexedQuery,
   usePublicationDetailsLazyQuery,
   useTxIdToTxHashLazyQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { useApolloClient } from '@lenstube/lens/apollo'
+import type { QueuedCommentType } from '@lenstube/lens/custom-types'
+import useAuthPersistStore from '@lib/store/auth'
+import usePersistStore from '@lib/store/persist'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
-import type { QueuedCommentType } from 'utils'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
 type Props = {
   queuedComment: QueuedCommentType
 }
 
 const QueuedComment: FC<Props> = ({ queuedComment }) => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
   const queuedComments = usePersistStore((state) => state.queuedComments)
   const setQueuedComments = usePersistStore((state) => state.setQueuedComments)
 
@@ -76,6 +79,7 @@ const QueuedComment: FC<Props> = ({ queuedComment }) => {
     },
     skip: !queuedComment?.txnId?.length && !queuedComment?.txnHash?.length,
     pollInterval: 1000,
+    notifyOnNetworkStatusChange: true,
     onCompleted: async (data) => {
       if (data.hasTxHashBeenIndexed.__typename === 'TransactionError') {
         return removeFromQueue()
@@ -95,7 +99,10 @@ const QueuedComment: FC<Props> = ({ queuedComment }) => {
     }
   })
 
-  if ((!queuedComment?.txnId && !queuedComment?.txnHash) || !selectedChannel) {
+  if (
+    (!queuedComment?.txnId && !queuedComment?.txnHash) ||
+    !selectedSimpleProfile
+  ) {
     return null
   }
 
@@ -103,24 +110,24 @@ const QueuedComment: FC<Props> = ({ queuedComment }) => {
     <div className="flex items-start justify-between">
       <div className="flex items-start justify-between">
         <Link
-          href={`/channel/${selectedChannel?.handle}`}
+          href={`/channel/${trimLensHandle(selectedSimpleProfile?.handle)}`}
           className="mr-3 mt-0.5 flex-none"
         >
           <img
-            src={getProfilePicture(selectedChannel, 'avatar')}
+            src={getProfilePicture(selectedSimpleProfile as Profile, 'AVATAR')}
             className="h-7 w-7 rounded-full"
             draggable={false}
-            alt={selectedChannel?.handle}
+            alt={selectedSimpleProfile?.handle}
           />
         </Link>
         <div className="mr-2 flex flex-col items-start">
           <span className="mb-1 flex items-center space-x-1">
             <Link
-              href={`/channel/${selectedChannel.handle}`}
+              href={`/channel/${trimLensHandle(selectedSimpleProfile.handle)}`}
               className="flex items-center space-x-1 text-sm font-medium"
             >
-              <span>{selectedChannel?.handle}</span>
-              <IsVerified id={selectedChannel.id} />
+              <span>{trimLensHandle(selectedSimpleProfile?.handle)}</span>
+              <Badge id={selectedSimpleProfile.id} />
             </Link>
           </span>
           <InterweaveContent content={queuedComment.comment} />

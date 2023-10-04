@@ -1,8 +1,19 @@
 import CollectVideo from '@components/Watch/CollectVideo'
+import { Analytics, TRACK, useAverageColor } from '@lenstube/browser'
+import {
+  getPublicationHlsUrl,
+  getPublicationRawMediaUrl,
+  getThumbnailUrl,
+  imageCdn,
+  sanitizeDStorageUrl
+} from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
+import VideoPlayer from '@lenstube/ui/VideoPlayer'
+import useAuthPersistStore from '@lib/store/auth'
 import { t } from '@lingui/macro'
-import type { Publication } from 'lens'
 import type { FC } from 'react'
 import React, { useEffect, useRef } from 'react'
+<<<<<<< HEAD
 import { Analytics, TRACK } from 'utils'
 import {
   getPublicationHlsUrl,
@@ -13,6 +24,8 @@ import imageCdn from 'utils/functions/imageCdn'
 import sanitizeDStorageUrl from 'utils/functions/sanitizeDStorageUrl'
 import useAverageColor from 'utils/hooks/useAverageColor'
 import VideoPlayer from 'web-ui/VideoPlayer'
+=======
+>>>>>>> upstream/main
 
 import BottomOverlay from './BottomOverlay'
 import ByteActions from './ByteActions'
@@ -33,9 +46,12 @@ const ByteVideo: FC<Props> = ({
   const intersectionRef = useRef<HTMLDivElement>(null)
   const thumbnailUrl = imageCdn(
     sanitizeDStorageUrl(getThumbnailUrl(video, true)),
-    'thumbnail_v'
+    'THUMBNAIL_V'
   )
   const { color: backgroundColor } = useAverageColor(thumbnailUrl, true)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const playVideo = () => {
     if (!videoRef.current) {
@@ -111,12 +127,12 @@ const ByteVideo: FC<Props> = ({
           />
           {currentViewingId === video.id ? (
             <VideoPlayer
+              address={selectedSimpleProfile?.ownedBy}
               refCallback={refCallback}
               permanentUrl={getPublicationRawMediaUrl(video)}
               hlsUrl={getPublicationHlsUrl(video)}
               posterUrl={thumbnailUrl}
               ratio="9to16"
-              publicationId={video.id}
               showControls={false}
               options={{
                 autoPlay: false,
@@ -158,8 +174,8 @@ const ByteVideo: FC<Props> = ({
           <ByteActions video={video} />
           {video?.collectModule?.__typename !==
             'RevertCollectModuleSettings' && (
-            <div className="text-center text-white md:text-gray-500">
-              <CollectVideo video={video} />
+            <div className="pt-3 text-center text-white md:text-gray-500">
+              <CollectVideo video={video} variant="none" />
               <div className="text-xs">
                 {video.stats?.totalAmountOfCollects || t`Collect`}
               </div>

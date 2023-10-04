@@ -1,9 +1,12 @@
 import CheckOutline from '@components/Common/Icons/CheckOutline'
+import type {
+  CollectModuleType,
+  UploadedVideo
+} from '@lenstube/lens/custom-types'
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
 import type { FC } from 'react'
 import React from 'react'
-import type { CollectModuleType, UploadedVideo } from 'utils'
 
 type Props = {
   uploadedVideo: UploadedVideo
@@ -24,25 +27,22 @@ const LimitDurationQuestion: FC<Props> = ({
           type="button"
           onClick={() =>
             setCollectType({
-              isTimedFeeCollect: false,
-              isFeeCollect: false,
-              isFreeCollect: uploadedVideo.collectModule.isLimitedFeeCollect
-                ? false
-                : true
+              timeLimitEnabled: false,
+              isSimpleCollect: true
             })
           }
           className={clsx(
             'flex w-full items-center justify-between rounded-xl border border-gray-300 px-4 py-2 text-sm focus:outline-none dark:border-gray-700',
             {
               '!border-indigo-500':
-                !uploadedVideo.collectModule.isTimedFeeCollect
+                !uploadedVideo.collectModule.timeLimitEnabled
             }
           )}
         >
           <span>
             <Trans>Unlimited duration</Trans>
           </span>
-          {!uploadedVideo.collectModule.isTimedFeeCollect && (
+          {!uploadedVideo.collectModule.timeLimitEnabled && (
             <CheckOutline className="h-3 w-3" />
           )}
         </button>
@@ -50,27 +50,21 @@ const LimitDurationQuestion: FC<Props> = ({
           type="button"
           onClick={() =>
             setCollectType({
-              isTimedFeeCollect: true,
-              isLimitedFeeCollect: uploadedVideo.collectModule
-                .isLimitedFeeCollect
-                ? true
-                : false,
-              isFeeCollect: true,
-              isFreeCollect: false
+              timeLimitEnabled: true,
+              isSimpleCollect: true
             })
           }
           className={clsx(
             'flex w-full items-center justify-between rounded-xl border border-gray-300 px-4 py-2 text-sm focus:outline-none dark:border-gray-700',
             {
-              '!border-indigo-500':
-                uploadedVideo.collectModule.isTimedFeeCollect
+              '!border-indigo-500': uploadedVideo.collectModule.timeLimitEnabled
             }
           )}
         >
           <span>
             <Trans>Limit to 24 hours sale</Trans>
           </span>
-          {uploadedVideo.collectModule.isTimedFeeCollect && (
+          {uploadedVideo.collectModule.timeLimitEnabled && (
             <CheckOutline className="h-3 w-3" />
           )}
         </button>

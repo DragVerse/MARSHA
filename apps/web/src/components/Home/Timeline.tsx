@@ -1,10 +1,10 @@
-import CommentedVideoCard from '@components/Channel/CommentedVideoCard'
 import MirroredVideoCard from '@components/Channel/MirroredVideoCard'
 import VideoCard from '@components/Common/VideoCard'
 import QueuedVideo from '@components/Common/VideoCard/QueuedVideo'
-import useChannelStore from '@lib/store/channel'
+import { trimLensHandle } from '@lenstube/generic'
+import type { Mirror, Publication } from '@lenstube/lens'
+import useAuthPersistStore from '@lib/store/auth'
 import usePersistStore from '@lib/store/persist'
-import type { Comment, Mirror, Publication } from 'lens'
 import type { FC } from 'react'
 import React from 'react'
 
@@ -15,16 +15,18 @@ type Props = {
 
 const Timeline: FC<Props> = ({ videos, videoType = 'Post' }) => {
   const queuedVideos = usePersistStore((state) => state.queuedVideos)
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
-  const isComment = videoType === 'Comment'
   const isMirror = videoType === 'Mirror'
   const isChannelPage =
-    location.pathname === `/channel/${selectedChannel?.handle}`
+    location.pathname ===
+    `/channel/${trimLensHandle(selectedSimpleProfile?.handle)}`
 
   return (
     <div
-      className="ultrawide:grid-cols-6 laptop:grid-cols-4 grid-col-1 grid gap-x-4 gap-y-2 md:grid-cols-2 md:gap-y-8 2xl:grid-cols-5"
+      className="laptop:grid-cols-4 grid-col-1 grid gap-x-4 gap-y-2 md:grid-cols-2 md:gap-y-8 2xl:grid-cols-5"
       data-testid="curated-videos"
     >
       {isChannelPage &&
@@ -36,12 +38,7 @@ const Timeline: FC<Props> = ({ videos, videoType = 'Post' }) => {
         ))}
       {videos?.map((video: Publication, i) => {
         const isPub = video.__typename === videoType
-        return isPub && isComment ? (
-          <CommentedVideoCard
-            key={`${video?.id}_${i}`}
-            video={video as Comment}
-          />
-        ) : isPub && isMirror ? (
+        return isPub && isMirror ? (
           <MirroredVideoCard
             key={`${video?.id}_${i}`}
             video={video as Mirror}

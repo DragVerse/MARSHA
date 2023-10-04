@@ -1,20 +1,22 @@
+import Badge from '@components/Common/Badge'
 import MirrorOutline from '@components/Common/Icons/MirrorOutline'
-import IsVerified from '@components/Common/IsVerified'
 import ThumbnailImage from '@components/Common/VideoCard/ThumbnailImage'
-import { Trans } from '@lingui/macro'
-import type { Attribute, Mirror, Publication } from 'lens'
-import Link from 'next/link'
-import type { FC } from 'react'
-import React from 'react'
+import {
+  getIsSensitiveContent,
+  getProfilePicture,
+  getValueFromTraitType,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Attribute, Mirror, Publication } from '@lenstube/lens'
 import {
   getDateString,
   getRelativeTime,
   getTimeFromSeconds
-} from 'utils/functions/formatTime'
-import { getValueFromTraitType } from 'utils/functions/getFromAttributes'
-import { getIsSensitiveContent } from 'utils/functions/getIsSensitiveContent'
-import getLensHandle from 'utils/functions/getLensHandle'
-import getProfilePicture from 'utils/functions/getProfilePicture'
+} from '@lib/formatTime'
+import { Trans } from '@lingui/macro'
+import Link from 'next/link'
+import type { FC } from 'react'
+import React from 'react'
 
 type Props = {
   video: Mirror
@@ -52,13 +54,13 @@ const MirroredVideoCard: FC<Props> = ({ video }) => {
       <div className="py-2">
         <div className="flex items-start space-x-2.5">
           <Link
-            href={`/channel/${getLensHandle(video.profile?.handle)}`}
+            href={`/channel/${video.profile?.handle}`}
             className="mt-0.5 flex-none"
           >
             <img
               className="h-8 w-8 rounded-full"
-              src={getProfilePicture(mirrorOf.profile, 'avatar')}
-              alt={getLensHandle(mirrorOf.profile.handle)}
+              src={getProfilePicture(mirrorOf.profile, 'AVATAR')}
+              alt={mirrorOf.profile.handle}
               draggable={false}
             />
           </Link>
@@ -73,11 +75,11 @@ const MirroredVideoCard: FC<Props> = ({ video }) => {
               </Link>
             </div>
             <Link
-              href={`/channel/${mirrorOf.profile?.handle}`}
+              href={`/channel/${trimLensHandle(mirrorOf.profile?.handle)}`}
               className="flex w-fit items-center space-x-0.5 text-[13px] opacity-70 hover:opacity-100"
             >
-              <span>{mirrorOf.profile?.handle}</span>
-              <IsVerified id={mirrorOf.profile?.id} size="xs" />
+              <span>{trimLensHandle(mirrorOf.profile?.handle)}</span>
+              <Badge id={mirrorOf.profile?.id} size="xs" />
             </Link>
           </div>
         </div>

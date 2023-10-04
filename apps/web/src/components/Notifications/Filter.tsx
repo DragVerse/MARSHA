@@ -1,6 +1,11 @@
 import CogOutline from '@components/Common/Icons/CogOutline'
 import DropMenu from '@components/UIElements/DropMenu'
 import { Menu } from '@headlessui/react'
+<<<<<<< HEAD
+=======
+import { CustomNotificationsFilterEnum } from '@lenstube/lens/custom-types'
+import usePersistStore from '@lib/store/persist'
+>>>>>>> upstream/main
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
 import React from 'react'

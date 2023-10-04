@@ -1,26 +1,26 @@
 import DropMenu, { NextLink } from '@components/UIElements/DropMenu'
 import { Menu } from '@headlessui/react'
+import { Analytics, TRACK } from '@lenstube/browser'
+import { ADMIN_IDS, IS_MAINNET } from '@lenstube/constants'
+import { getProfilePicture, trimLensHandle } from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
+import { useSimpleProfilesLazyQuery } from '@lenstube/lens'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
+import { Loader } from '@lenstube/ui'
 import useAuthPersistStore, { signOut } from '@lib/store/auth'
 import useChannelStore from '@lib/store/channel'
 import { t, Trans } from '@lingui/macro'
+<<<<<<< HEAD
 import clsx from 'clsx'
 import type { Profile } from 'lens'
 import { useAllProfilesLazyQuery } from 'lens'
+=======
+import Link from 'next/link'
+>>>>>>> upstream/main
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
 import React, { useState } from 'react'
 import { toast } from 'react-hot-toast'
-import useSWR from 'swr'
-import type { CustomErrorWithData } from 'utils'
-import {
-  ADMIN_IDS,
-  Analytics,
-  HEALTH_URL,
-  IS_MAINNET,
-  LENSTUBE_STATUS_PAGE,
-  TRACK
-} from 'utils'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 import { useAccount, useDisconnect } from 'wagmi'
 import ChannelOutline from './Icons/ChannelOutline'
 import CheckOutline from './Icons/CheckOutline'
@@ -29,34 +29,30 @@ import CogOutline from './Icons/CogOutline'
 import GraphOutline from './Icons/GraphOutline'
 import HandWaveOutline from './Icons/HandWaveOutline'
 import PlusOutline from './Icons/PlusOutline'
+<<<<<<< HEAD
+=======
+import SaveToListOutline from './Icons/SaveToListOutline'
+import SunOutline from './Icons/SunOutline'
+>>>>>>> upstream/main
 import SwitchChannelOutline from './Icons/SwitchChannelOutline'
 
 const UserMenu: React.FC = () => {
   const { theme, setTheme } = useTheme()
   const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
+  const [channels, setChannels] = useState<Profile[]>([])
 
-  const setChannels = useChannelStore((state) => state.setChannels)
   const setShowCreateChannel = useChannelStore(
     (state) => state.setShowCreateChannel
   )
-  const channels = useChannelStore((state) => state.channels)
-  const setSelectedChannel = useChannelStore(
-    (state) => state.setSelectedChannel
+  const setActiveChannel = useChannelStore((state) => state.setActiveChannel)
+
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
-  const selectedChannel = useChannelStore(
-    (state) => state.selectedChannel as Profile
-  )
-  const setSelectedChannelId = useAuthPersistStore(
-    (state) => state.setSelectedChannelId
+  const setSelectedSimpleProfile = useAuthPersistStore(
+    (state) => state.setSelectedSimpleProfile
   )
 
-  const { data: statusData } = useSWR(
-    IS_MAINNET ? HEALTH_URL : null,
-    (url: string) => fetch(url).then((res) => res.json()),
-    { revalidateOnFocus: true }
-  )
-
-  const [getChannels] = useAllProfilesLazyQuery()
   const { address } = useAccount()
   const { disconnect } = useDisconnect({
     onError(error: CustomErrorWithData) {
@@ -64,11 +60,22 @@ const UserMenu: React.FC = () => {
     }
   })
 
-  const isAdmin = ADMIN_IDS.includes(selectedChannel?.id)
+  const [getAllSimpleProfiles, { loading }] = useSimpleProfilesLazyQuery()
 
-  const onSelectChannel = (channel: Profile) => {
-    setSelectedChannel(channel)
-    setSelectedChannelId(channel.id)
+  const isAdmin = ADMIN_IDS.includes(selectedSimpleProfile?.id)
+
+  const onSelectChannel = (profile: Profile) => {
+    setActiveChannel(profile)
+    // hand picked attributes to persist, to not bloat storage
+    setSelectedSimpleProfile({
+      handle: profile.handle,
+      id: profile.id,
+      isDefault: profile.isDefault,
+      ownedBy: profile.ownedBy,
+      stats: profile.stats,
+      dispatcher: profile.dispatcher,
+      picture: profile.picture
+    })
     setShowAccountSwitcher(false)
     Analytics.track(TRACK.CHANNEL.SWITCH)
   }
@@ -76,15 +83,23 @@ const UserMenu: React.FC = () => {
   const onSelectSwitchChannel = async () => {
     try {
       setShowAccountSwitcher(true)
-      const { data } = await getChannels({
+      const { data } = await getAllSimpleProfiles({
         variables: {
           request: { ownedBy: [address] }
         },
-        fetchPolicy: 'no-cache'
+        fetchPolicy: 'network-only'
       })
       const allChannels = data?.profiles?.items as Profile[]
       setChannels(allChannels)
     } catch {}
+  }
+
+  const logout = () => {
+    disconnect?.()
+    signOut()
+    setActiveChannel(null)
+    setSelectedSimpleProfile(null)
+    Analytics.track(TRACK.AUTH.SIGN_OUT)
   }
 
   return (
@@ -95,9 +110,15 @@ const UserMenu: React.FC = () => {
           className="btn-primary flex-none ring-gray-200 hover:ring-4 dark:ring-gray-800"
         >
           <img
+<<<<<<< HEAD
             className="bg-theme h-8 w-8 rounded-full bg-white object-cover md:h-9 md:w-9"
             src={getProfilePicture(selectedChannel)}
             alt={selectedChannel.handle}
+=======
+            className="dark:bg-theme h-8 w-8 rounded-full bg-white object-cover md:h-9 md:w-9"
+            src={getProfilePicture(selectedSimpleProfile as Profile)}
+            alt={selectedSimpleProfile?.handle}
+>>>>>>> upstream/main
             draggable={false}
           />
         </button>
@@ -116,6 +137,11 @@ const UserMenu: React.FC = () => {
                 <span className="py-2 text-sm">Channels</span>
               </button>
               <div className="py-1 text-sm">
+                {loading && !channels.length ? (
+                  <div className="py-10">
+                    <Loader />
+                  </div>
+                ) : null}
                 {channels?.map((channel) => (
                   <button
                     type="button"
@@ -125,7 +151,7 @@ const UserMenu: React.FC = () => {
                   >
                     <span className="inline-flex items-center space-x-1.5">
                       <img
-                        className="h-6 w-6 rounded-lg"
+                        className="h-6 w-6 rounded-full"
                         src={getProfilePicture(channel)}
                         alt={channel.handle}
                         draggable={false}
@@ -134,7 +160,7 @@ const UserMenu: React.FC = () => {
                         {channel.handle}
                       </span>
                     </span>
-                    {selectedChannel?.id === channel.id && (
+                    {selectedSimpleProfile?.id === channel.id && (
                       <CheckOutline className="h-3 w-3" />
                     )}
                   </button>
@@ -145,11 +171,18 @@ const UserMenu: React.FC = () => {
             <>
               <div className="flex flex-col space-y-1 rounded-lg text-sm transition duration-150 ease-in-out">
                 <div className="inline-flex items-center space-x-2 rounded-lg p-3">
-                  <Link href={`/channel/${selectedChannel?.handle}`}>
+                  <Link
+                    href={`/channel/${trimLensHandle(
+                      selectedSimpleProfile?.handle
+                    )}`}
+                  >
                     <img
                       className="h-9 w-9 rounded-full object-cover"
-                      src={getProfilePicture(selectedChannel, 'avatar')}
-                      alt={selectedChannel.handle}
+                      src={getProfilePicture(
+                        selectedSimpleProfile as Profile,
+                        'AVATAR'
+                      )}
+                      alt={selectedSimpleProfile?.handle}
                       draggable={false}
                     />
                   </Link>
@@ -157,12 +190,16 @@ const UserMenu: React.FC = () => {
                     <span className="text-xs opacity-70">
                       <Trans>Connected as</Trans>
                     </span>
-                    <Link href={`/channel/${selectedChannel?.handle}`}>
+                    <Link
+                      href={`/channel/${trimLensHandle(
+                        selectedSimpleProfile?.handle
+                      )}`}
+                    >
                       <h6
-                        title={selectedChannel?.handle}
+                        title={selectedSimpleProfile?.handle}
                         className="truncate text-base leading-4"
                       >
-                        {selectedChannel?.handle}
+                        {selectedSimpleProfile?.handle}
                       </h6>
                     </Link>
                   </div>
@@ -181,16 +218,28 @@ const UserMenu: React.FC = () => {
                     </span>
                   </Menu.Item>
                 )}
-                {selectedChannel && (
+                {selectedSimpleProfile && (
                   <>
                     <Menu.Item
                       as={NextLink}
-                      href={`/channel/${selectedChannel?.handle}`}
+                      href={`/channel/${trimLensHandle(
+                        selectedSimpleProfile?.handle
+                      )}`}
                       className="inline-flex w-full items-center space-x-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                       <ChannelOutline className="h-4 w-4" />
                       <span className="truncate whitespace-nowrap">
                         <Trans>Your Channel</Trans>
+                      </span>
+                    </Menu.Item>
+                    <Menu.Item
+                      as={NextLink}
+                      href="/channel/saved"
+                      className="inline-flex w-full items-center space-x-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <SaveToListOutline className="h-4 w-4" />
+                      <span className="truncate whitespace-nowrap">
+                        <Trans>Saved Videos</Trans>
                       </span>
                     </Menu.Item>
                     <button
@@ -217,7 +266,8 @@ const UserMenu: React.FC = () => {
                     </span>
                   </button>
                 )}
-                <Link
+                <Menu.Item
+                  as="a"
                   href="/settings"
                   className="flex w-full items-center space-x-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
@@ -225,10 +275,16 @@ const UserMenu: React.FC = () => {
                   <span className="truncate whitespace-nowrap">
                     <Trans>Channel Settings</Trans>
                   </span>
+<<<<<<< HEAD
                 </Link>
                 {/* TODO: Add back when light mode is supported */}
                 {/* <button
                   type="button"
+=======
+                </Menu.Item>
+                <Menu.Item
+                  as="button"
+>>>>>>> upstream/main
                   className="flex w-full items-center space-x-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
                   onClick={() => {
                     const selected = theme === 'dark' ? 'light' : 'dark'
@@ -246,45 +302,27 @@ const UserMenu: React.FC = () => {
                   <span className="truncate whitespace-nowrap">
                     {theme === 'light' ? t`Switch to Dark` : t`Switch to Light`}
                   </span>
+<<<<<<< HEAD
                 </button> */}
                 <button
                   type="button"
+=======
+                </Menu.Item>
+                <Menu.Item
+                  as="button"
+>>>>>>> upstream/main
                   className="flex w-full items-center space-x-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  onClick={() => {
-                    disconnect?.()
-                    signOut()
-                    Analytics.track(TRACK.AUTH.SIGN_OUT)
-                  }}
+                  onClick={() => logout()}
                 >
                   <HandWaveOutline className="h-4 w-4" />
                   <span className="truncate whitespace-nowrap">
                     <Trans>Sign out</Trans>
                   </span>
-                </button>
+                </Menu.Item>
               </div>
             </>
           )}
         </div>
-        {IS_MAINNET && (
-          <Link
-            className="m-0.5 flex items-center space-x-2 px-5 pb-3 pt-2"
-            href={LENSTUBE_STATUS_PAGE}
-            target="_blank"
-            onClick={() => Analytics.track(TRACK.SYSTEM.MORE_MENU.STATUS)}
-          >
-            <span
-              className={clsx(
-                'h-2 w-2 rounded-full',
-                statusData?.ok ? 'bg-green-500' : 'bg-red-500'
-              )}
-            />
-            <span className="text-xs">
-              {statusData?.ok
-                ? t`All services are online`
-                : t`Some services are offline`}
-            </span>
-          </Link>
-        )}
       </div>
     </DropMenu>
   )

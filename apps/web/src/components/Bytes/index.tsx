@@ -1,27 +1,27 @@
 import ChevronDownOutline from '@components/Common/Icons/ChevronDownOutline'
 import ChevronUpOutline from '@components/Common/Icons/ChevronUpOutline'
 import MetaTags from '@components/Common/MetaTags'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
-import useChannelStore from '@lib/store/channel'
-import type { Publication } from 'lens'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_BYTES_APP_ID,
+  SCROLL_ROOT_MARGIN
+} from '@lenstube/constants'
+import type { Publication } from '@lenstube/lens'
 import {
   PublicationSortCriteria,
   PublicationTypes,
   useExploreLazyQuery,
   usePublicationDetailsLazyQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
+import { t } from '@lingui/macro'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import React, { useEffect, useRef, useState } from 'react'
 import { useInView } from 'react-cool-inview'
-import {
-  Analytics,
-  LENS_CUSTOM_FILTERS,
-  LENSTUBE_BYTES_APP_ID,
-  SCROLL_ROOT_MARGIN,
-  TRACK
-} from 'utils'
 
 import ByteVideo from './ByteVideo'
 
@@ -38,7 +38,9 @@ const Bytes = () => {
   const router = useRouter()
   const bytesContainer = useRef<HTMLDivElement>(null)
   const [currentViewingId, setCurrentViewingId] = useState('')
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const [fetchPublication, { data: singleByte, loading: singleByteLoading }] =
     usePublicationDetailsLazyQuery()
@@ -47,10 +49,10 @@ const Bytes = () => {
     useExploreLazyQuery({
       variables: {
         request,
-        reactionRequest: selectedChannel
-          ? { profileId: selectedChannel?.id }
+        reactionRequest: selectedSimpleProfile
+          ? { profileId: selectedSimpleProfile?.id }
           : null,
-        channelId: selectedChannel?.id ?? null
+        channelId: selectedSimpleProfile?.id ?? null
       },
       onCompleted: ({ explorePublications }) => {
         const items = explorePublications?.items as Publication[]
@@ -74,10 +76,10 @@ const Bytes = () => {
     await fetchPublication({
       variables: {
         request: { publicationId },
-        reactionRequest: selectedChannel
-          ? { profileId: selectedChannel?.id }
+        reactionRequest: selectedSimpleProfile
+          ? { profileId: selectedSimpleProfile?.id }
           : null,
-        channelId: selectedChannel?.id ?? null
+        channelId: selectedSimpleProfile?.id ?? null
       },
       onCompleted: () => fetchAllBytes(),
       fetchPolicy: 'network-only'
@@ -117,7 +119,7 @@ const Bytes = () => {
   if (error) {
     return (
       <div className="grid h-[80vh] place-items-center">
-        <NoDataFound isCenter withImage text="No bytes found" />
+        <NoDataFound isCenter withImage text={t`No bytes found`} />
       </div>
     )
   }

@@ -1,13 +1,16 @@
+import {
+  formatNumber,
+  getProfilePicture,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
 import { Trans } from '@lingui/macro'
-import type { Profile } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
-import formatNumber from 'utils/functions/formatNumber'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
+import Badge from '../Badge'
 import UserOutline from '../Icons/UserOutline'
-import IsVerified from '../IsVerified'
 
 interface Props {
   results: Profile[]
@@ -20,30 +23,29 @@ const Channels: FC<Props> = ({ results, loading, clearSearch }) => {
     <>
       {results?.map((channel: Profile) => (
         <div
-          onClick={() => clearSearch()}
           key={channel.id}
           className="relative cursor-default select-none pl-3 pr-4 hover:bg-gray-100 dark:hover:bg-gray-900"
-          role="button"
           data-testid={`search-channel-${channel.handle}`}
         >
           <Link
-            href={`/channel/${channel?.handle}`}
+            onClick={() => clearSearch()}
+            href={`/channel/${trimLensHandle(channel?.handle)}`}
             key={channel?.handle}
             className="flex flex-col justify-center space-y-1 rounded-xl py-2"
           >
             <span className="flex items-center justify-between">
               <div className="inline-flex w-3/4 items-center space-x-2">
                 <img
-                  className="h-5 w-5 rounded-md"
-                  src={getProfilePicture(channel, 'avatar')}
+                  className="h-5 w-5 rounded-full"
+                  src={getProfilePicture(channel, 'AVATAR')}
                   draggable={false}
                   alt="pfp"
                 />
                 <div className="flex items-center space-x-1">
                   <p className="line-clamp-1 truncate text-base">
-                    <span>{channel?.handle}</span>
+                    <span>{trimLensHandle(channel?.handle)}</span>
                   </p>
-                  <IsVerified id={channel?.id} size="xs" />
+                  <Badge id={channel?.id} size="xs" />
                 </div>
               </div>
               <span className="inline-flex items-center space-x-1 whitespace-nowrap text-xs opacity-60">

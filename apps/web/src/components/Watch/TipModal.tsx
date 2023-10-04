@@ -1,23 +1,27 @@
 import { LENSHUB_PROXY_ABI } from '@abis/LensHubProxy'
-import { useApolloClient } from '@apollo/client'
 import HeartOutline from '@components/Common/Icons/HeartOutline'
 import { Button } from '@components/UIElements/Button'
 import { Input } from '@components/UIElements/Input'
 import Modal from '@components/UIElements/Modal'
 import { TextArea } from '@components/UIElements/TextArea'
 import { zodResolver } from '@hookform/resolvers/zod'
-import useAuthPersistStore from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import usePersistStore from '@lib/store/persist'
-import { t, Trans } from '@lingui/macro'
-import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { BigNumber, utils } from 'ethers'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import { Analytics, getUserLocale, TRACK } from '@lenstube/browser'
+import {
+  ERROR_MESSAGE,
+  LENSHUB_PROXY_ADDRESS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_WEBSITE_URL,
+  REQUESTING_SIGNATURE_MESSAGE,
+  STATIC_ASSETS
+} from '@lenstube/constants'
+import { getSignature, imageCdn, logger, uploadToAr } from '@lenstube/generic'
 import type {
   CreateCommentBroadcastItemResult,
   CreateDataAvailabilityCommentRequest,
   CreatePublicCommentRequest,
   Publication
-} from 'lens'
+} from '@lenstube/lens'
 import {
   PublicationDetailsDocument,
   PublicationMainFocus,
@@ -29,30 +33,23 @@ import {
   useCreateDataAvailabilityCommentTypedDataMutation,
   useCreateDataAvailabilityCommentViaDispatcherMutation,
   usePublicationDetailsLazyQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { useApolloClient } from '@lenstube/lens/apollo'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
+import useAuthPersistStore from '@lib/store/auth'
+import useChannelStore from '@lib/store/channel'
+import usePersistStore from '@lib/store/persist'
+import { t, Trans } from '@lingui/macro'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import type { CustomErrorWithData } from 'utils'
-import {
-  Analytics,
-  ERROR_MESSAGE,
-  LENSHUB_PROXY_ADDRESS,
-  LENSTUBE_APP_ID,
-  LENSTUBE_WEBSITE_URL,
-  REQUESTING_SIGNATURE_MESSAGE,
-  STATIC_ASSETS,
-  TRACK
-} from 'utils'
-import getUserLocale from 'utils/functions/getUserLocale'
-import imageCdn from 'utils/functions/imageCdn'
-import omitKey from 'utils/functions/omitKey'
-import uploadToAr from 'utils/functions/uploadToAr'
-import logger from 'utils/logger'
 import { v4 as uuidv4 } from 'uuid'
+import { parseEther } from 'viem'
 import { useContractWrite, useSendTransaction, useSignTypedData } from 'wagmi'
-import { z } from 'zod'
+import type { z } from 'zod'
+import { number, object, string } from 'zod'
 
 type Props = {
   show: boolean
@@ -60,13 +57,12 @@ type Props = {
   video: Publication
 }
 
-const formSchema = z.object({
-  tipQuantity: z
-    .number()
+const formSchema = object({
+  tipQuantity: number()
     .nonnegative({ message: t`Tip should to greater than zero` })
     .max(100, { message: t`Tip should be less than or equal to 100 MATIC` })
     .refine((n) => n > 0, { message: t`Tip should be greater than 0 MATIC` }),
-  message: z.string().min(1, { message: t`Tip message is requried` })
+  message: string().min(1, { message: t`Tip message is requried` })
 })
 type FormData = z.infer<typeof formSchema>
 
@@ -87,19 +83,20 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
   const watchTipQuantity = watch('tipQuantity', 1)
 
   const { openConnectModal } = useConnectModal()
+  const handleWrongNetwork = useHandleWrongNetwork()
   const { cache } = useApolloClient()
   const [loading, setLoading] = useState(false)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
   const queuedComments = usePersistStore((state) => state.queuedComments)
   const setQueuedComments = usePersistStore((state) => state.setQueuedComments)
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const activeChannel = useChannelStore((state) => state.activeChannel)
   const userSigNonce = useChannelStore((state) => state.userSigNonce)
   const setUserSigNonce = useChannelStore((state) => state.setUserSigNonce)
   // Dispatcher
-  const canUseRelay = selectedChannel?.dispatcher?.canUseRelay
-  const isSponsored = selectedChannel?.dispatcher?.sponsor
+  const canUseRelay = activeChannel?.dispatcher?.canUseRelay
+  const isSponsored = activeChannel?.dispatcher?.sponsor
 
   const onError = (error: CustomErrorWithData) => {
     toast.error(error?.data?.message ?? error.message)
@@ -107,9 +104,7 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
   }
 
   const { sendTransactionAsync } = useSendTransaction({
-    request: {},
-    onError,
-    mode: 'recklesslyUnprepared'
+    onError
   })
   const { signTypedDataAsync } = useSignTypedData({
     onError
@@ -167,11 +162,10 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
     setShowTip(false)
   }
 
-  const { write: writeComment } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENSHUB_PROXY_ADDRESS,
     abi: LENSHUB_PROXY_ABI,
-    functionName: 'commentWithSig',
-    mode: 'recklesslyUnprepared',
+    functionName: 'comment',
     onError,
     onSuccess: (data) => {
       setToQueue({ txnHash: data.hash })
@@ -203,51 +197,23 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
   ) => {
     const { typedData } = data
     toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-    const signature = await signTypedDataAsync({
-      domain: omitKey(typedData?.domain, '__typename'),
-      types: omitKey(typedData?.types, '__typename'),
-      value: omitKey(typedData?.value, '__typename')
-    })
+    const signature = await signTypedDataAsync(getSignature(typedData))
     return signature
   }
 
   const [createCommentTypedData] = useCreateCommentTypedDataMutation({
     onCompleted: async ({ createCommentTypedData }) => {
       const { typedData, id } = createCommentTypedData
-      const {
-        profileId,
-        profileIdPointed,
-        pubIdPointed,
-        contentURI,
-        collectModule,
-        collectModuleInitData,
-        referenceModule,
-        referenceModuleData,
-        referenceModuleInitData
-      } = typedData?.value
       try {
         const signature = await getSignatureFromTypedData(
           createCommentTypedData
         )
-        const { v, r, s } = utils.splitSignature(signature)
-        const args = {
-          profileId,
-          profileIdPointed,
-          pubIdPointed,
-          contentURI,
-          collectModule,
-          collectModuleInitData,
-          referenceModule,
-          referenceModuleData,
-          referenceModuleInitData,
-          sig: { v, r, s, deadline: typedData.value.deadline }
-        }
         setUserSigNonce(userSigNonce + 1)
         const { data } = await broadcast({
           variables: { request: { id, signature } }
         })
         if (data?.broadcast?.__typename === 'RelayError') {
-          writeComment?.({ recklesslySetUnpreparedArgs: [args] })
+          write?.({ args: [typedData.value] })
         }
       } catch {
         setLoading(false)
@@ -365,7 +331,7 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
         external_url: `${LENSTUBE_WEBSITE_URL}/watch/${video?.id}`,
         image: null,
         imageMimeType: null,
-        name: `${selectedChannel?.handle}'s comment on video ${video.metadata.name}`,
+        name: `${activeChannel?.handle}'s comment on video ${video.metadata.name}`,
         attributes: [
           {
             displayType: PublicationMetadataDisplayTypes.String,
@@ -388,12 +354,12 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
       })
 
       const dataAvailablityRequest = {
-        from: selectedChannel?.id,
+        from: activeChannel?.id,
         commentOn: video.id,
         contentURI: metadataUri
       }
       const request = {
-        profileId: selectedChannel?.id,
+        profileId: activeChannel?.id,
         publicationId: video?.id,
         contentURI: metadataUri,
         collectModule: {
@@ -419,9 +385,13 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
   }
 
   const onSendTip = async () => {
-    if (!selectedChannelId) {
+    if (!selectedSimpleProfile?.id) {
       return openConnectModal?.()
     }
+    if (handleWrongNetwork()) {
+      return
+    }
+
     if (video.isDataAvailability && !isSponsored) {
       return toast.error(
         t`Momoka is currently in beta - during this time certain actions are not available to all channels.`
@@ -431,10 +401,8 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
     const amountToSend = Number(getValues('tipQuantity')) * 1
     try {
       const data = await sendTransactionAsync?.({
-        recklesslySetUnpreparedRequest: {
-          to: video.profile?.ownedBy,
-          value: BigNumber.from(utils.parseEther(amountToSend.toString()))
-        }
+        to: video.profile?.ownedBy,
+        value: BigInt(parseEther(amountToSend.toString() as `${number}`))
       })
       if (data?.hash) {
         await submitComment(data.hash)
@@ -466,7 +434,7 @@ const TipModal: FC<Props> = ({ show, setShowTip, video }) => {
             <img
               src={imageCdn(
                 `${STATIC_ASSETS}/images/raise-hand.png`,
-                'avatar_lg'
+                'AVATAR_LG'
               )}
               alt="Raising Hand"
               className="h-10"

@@ -1,13 +1,19 @@
-import { useLazyQuery } from '@apollo/client'
-import { Loader } from '@components/UIElements/Loader'
 import { Tab } from '@headlessui/react'
-import { t, Trans } from '@lingui/macro'
-import clsx from 'clsx'
-import type { Profile, Publication } from 'lens'
+import { Analytics, TRACK, useOutsideClick } from '@lenstube/browser'
+import {
+  ALLOWED_APP_IDS,
+  IS_MAINNET,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_BYTES_APP_ID
+} from '@lenstube/constants'
+import { useDebounce } from '@lenstube/generic'
+import type { Profile, Publication } from '@lenstube/lens'
 import {
   SearchProfilesDocument,
   SearchPublicationsDocument,
   SearchRequestTypes
+<<<<<<< HEAD
 } from 'lens'
 import React, { useEffect, useRef, useState } from 'react'
 import {
@@ -19,6 +25,16 @@ import {
 } from 'utils'
 import useDebounce from 'utils/hooks/useDebounce'
 import useOutsideClick from 'utils/hooks/useOutsideClick'
+=======
+} from '@lenstube/lens'
+import { useLazyQuery } from '@lenstube/lens/apollo'
+import { Loader } from '@lenstube/ui'
+import { t, Trans } from '@lingui/macro'
+import clsx from 'clsx'
+import type { FC } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+
+>>>>>>> upstream/main
 import SearchOutline from '../Icons/SearchOutline'
 import Channels from './Channels'
 import Videos from './Videos'
@@ -48,7 +64,9 @@ const GlobalSearchBar: React.FC<Props> = ({ onSearchResults }) => {
             type: activeSearch,
             query: keyword,
             limit: 30,
-            sources: [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID],
+            sources: IS_MAINNET
+              ? [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS]
+              : undefined,
             customFilters: LENS_CUSTOM_FILTERS
           }
         }

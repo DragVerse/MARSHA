@@ -1,5 +1,5 @@
 {
-  "name": "api",
+  "name": "@lenstube/api",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -7,18 +7,19 @@
     "export": "next export",
     "build": "next build",
     "start": "yarn build && next start --port 4002",
-    "typecheck": "tsc --pretty --noEmit",
+    "typecheck": "tsc --pretty",
     "lint": "eslint . --ext .js,.ts,.tsx"
   },
   "dependencies": {
-    "next": "13.4.2"
+    "next": "13.4.19"
   },
   "devDependencies": {
-    "@types/node": "20.1.7",
-    "eslint-config-weblint": "*",
-    "lens": "*",
-    "tsconfig": "*",
-    "typescript": "5.0.4",
-    "utils": "*"
+    "@lenstube/browser": "*",
+    "@lenstube/config": "*",
+    "@lenstube/constants": "*",
+    "@lenstube/generic": "*",
+    "@lenstube/lens": "*",
+    "@types/node": "20.8.2",
+    "typescript": "5.2.2"
   }
 }

@@ -1,9 +1,12 @@
 import CheckOutline from '@components/Common/Icons/CheckOutline'
+import type {
+  CollectModuleType,
+  UploadedVideo
+} from '@lenstube/lens/custom-types'
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
 import type { FC } from 'react'
 import React from 'react'
-import type { CollectModuleType, UploadedVideo } from 'utils'
 
 type Props = {
   uploadedVideo: UploadedVideo
@@ -21,9 +24,8 @@ const PermissionQuestion: FC<Props> = ({ uploadedVideo, setCollectType }) => {
           type="button"
           onClick={() =>
             setCollectType({
-              isFreeCollect: true,
+              isSimpleCollect: true,
               isRevertCollect: false,
-              isFeeCollect: false,
               followerOnlyCollect: false
             })
           }
@@ -48,10 +50,9 @@ const PermissionQuestion: FC<Props> = ({ uploadedVideo, setCollectType }) => {
           type="button"
           onClick={() =>
             setCollectType({
+              isSimpleCollect: true,
               followerOnlyCollect: true,
-              isRevertCollect: false,
-              isFreeCollect: true,
-              isFeeCollect: false
+              isRevertCollect: false
             })
           }
           className={clsx(
@@ -75,6 +76,7 @@ const PermissionQuestion: FC<Props> = ({ uploadedVideo, setCollectType }) => {
           type="button"
           onClick={() =>
             setCollectType({
+              isSimpleCollect: false,
               isRevertCollect: true
             })
           }

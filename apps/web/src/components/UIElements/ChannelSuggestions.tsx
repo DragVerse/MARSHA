@@ -1,9 +1,9 @@
-import IsVerified from '@components/Common/IsVerified'
+import Badge from '@components/Common/Badge'
+import { formatNumber, trimLensHandle } from '@lenstube/generic'
 import { Trans } from '@lingui/macro'
 import clsx from 'clsx'
 import type { FC } from 'react'
 import React from 'react'
-import formatNumber from 'utils/functions/formatNumber'
 
 type Props = {
   className?: string
@@ -30,8 +30,10 @@ const ChannelSuggestions: FC<Props> = ({
       />
       <div className="overflow-hidden">
         <div className="flex items-center space-x-0.5">
-          <p className="truncate font-medium leading-4">{handle}</p>
-          <IsVerified id={id} size="xs" />
+          <p className="truncate font-medium leading-4">
+            {trimLensHandle(handle)}
+          </p>
+          <Badge id={id} size="xs" />
         </div>
         <span className="text-xs opacity-80">
           {formatNumber(subscribersCount)} <Trans>subscribers</Trans>

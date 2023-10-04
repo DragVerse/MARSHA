@@ -1,7 +1,15 @@
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  LENSTUBE_GITHUB_HANDLE,
+  LENSTUBE_ROADMAP_URL,
+  LENSTUBE_STATUS_PAGE,
+  LENSTUBE_X_HANDLE
+} from '@lenstube/constants'
 import usePersistStore from '@lib/store/persist'
 import { Trans } from '@lingui/react'
 import Link from 'next/link'
 import React from 'react'
+<<<<<<< HEAD
 import {
   Analytics,
   LENSTUBE_DISCORD_INVITE_URL,
@@ -10,6 +18,8 @@ import {
   LENSTUBE_TWITTER_HANDLE,
   TRACK
 } from 'utils'
+=======
+>>>>>>> upstream/main
 
 const Footer: React.FC = () => {
   const setSidebarCollapsed = usePersistStore(
@@ -19,6 +29,17 @@ const Footer: React.FC = () => {
   return (
     <div className="grid grid-cols-2 text-sm">
       {/* <Link
+        className="rounded-lg px-2.5 py-1.5 opacity-80 hover:opacity-100"
+        href={LENSTUBE_ROADMAP_URL}
+        onClick={() => {
+          setSidebarCollapsed(true)
+          Analytics.track(TRACK.SYSTEM.MORE_MENU.ROADMAP)
+        }}
+        target="_blank"
+      >
+        <Trans>Feedback</Trans>
+      </Link>
+      <Link
         className="rounded-lg px-2.5 py-1.5 opacity-80 hover:opacity-100"
         href={LENSTUBE_STATUS_PAGE}
         onClick={() => {
@@ -42,14 +63,14 @@ const Footer: React.FC = () => {
       </Link>
       <Link
         className="rounded-lg px-2.5 py-1.5 opacity-80 hover:opacity-100"
-        href={`https://twitter.com/${LENSTUBE_TWITTER_HANDLE}`}
+        href={`https://x.com/${LENSTUBE_X_HANDLE}`}
         onClick={() => {
           setSidebarCollapsed(true)
-          Analytics.track(TRACK.SYSTEM.MORE_MENU.TWITTER)
+          Analytics.track(TRACK.SYSTEM.MORE_MENU.X)
         }}
         target="_blank"
       >
-        Twitter
+        x.com
       </Link>
       <Link
         className="rounded-lg px-2.5 py-1.5 opacity-80 hover:opacity-100"
@@ -75,6 +96,7 @@ const Footer: React.FC = () => {
       </Link> */}
       <Link
         className="rounded-lg px-2.5 py-1.5 opacity-80 hover:opacity-100"
+<<<<<<< HEAD
         href={LENSTUBE_ROADMAP_URL}
         onClick={() => {
           setSidebarCollapsed(true)
@@ -86,6 +108,8 @@ const Footer: React.FC = () => {
       </Link>
       <Link
         className="rounded-lg px-2.5 py-1.5 opacity-80 hover:opacity-100"
+=======
+>>>>>>> upstream/main
         target="_blank"
         onClick={() => {
           setSidebarCollapsed(true)

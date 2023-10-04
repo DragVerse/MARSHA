@@ -19,15 +19,14 @@ fragment MirrorFields on Mirror {
   collectNftAddress
   onChainContentURI
   hidden
+  notInterested(by: $channelId)
+  bookmarked(by: $channelId)
   isGated
   isDataAvailability
   dataAvailabilityProofs
   hasCollectedByMe
   stats {
-    totalUpvotes
-    totalAmountOfMirrors
-    totalAmountOfCollects
-    totalAmountOfComments
+    ...PublicationStatsFields
   }
   metadata {
     ...MetadataFields

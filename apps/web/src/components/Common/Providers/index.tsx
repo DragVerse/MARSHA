@@ -1,87 +1,96 @@
-import { ApolloProvider } from '@apollo/client'
-import apolloClient from '@lib/apollo'
+import { getLivepeerClient, videoPlayerTheme } from '@lenstube/browser'
+import {
+  IS_MAINNET,
+  LENSTUBE_APP_NAME,
+  WC_PROJECT_ID
+} from '@lenstube/constants'
+import { apolloClient, ApolloProvider } from '@lenstube/lens/apollo'
+import authLink from '@lib/authLink'
 import { loadLocale } from '@lib/i18n'
 import { i18n } from '@lingui/core'
 import { I18nProvider } from '@lingui/react'
 import { LivepeerConfig } from '@livepeer/react'
-import {
-  connectorsForWallets,
-  darkTheme,
-  lightTheme,
-  RainbowKitProvider
-} from '@rainbow-me/rainbowkit'
-import type { ThemeOptions } from '@rainbow-me/rainbowkit/dist/themes/baseTheme'
+import { connectorsForWallets } from '@rainbow-me/rainbowkit'
 import {
   coinbaseWallet,
   injectedWallet,
   ledgerWallet,
+  metaMaskWallet,
   rainbowWallet,
   walletConnectWallet
 } from '@rainbow-me/rainbowkit/wallets'
-import { ThemeProvider, useTheme } from 'next-themes'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from 'next-themes'
 import type { ReactNode } from 'react'
 import React, { useEffect } from 'react'
-import { IS_MAINNET, LENSTUBE_APP_NAME, POLYGON_RPC_URL } from 'utils'
-import { getLivepeerClient, videoPlayerTheme } from 'utils/functions/livepeer'
-import { configureChains, createClient, WagmiConfig } from 'wagmi'
-import { polygon, polygonMumbai } from 'wagmi/chains'
-import { jsonRpcProvider } from 'wagmi/providers/jsonRpc'
+import { configureChains, createConfig, WagmiConfig } from 'wagmi'
+import {
+  base,
+  baseGoerli,
+  goerli,
+  mainnet,
+  optimism,
+  optimismGoerli,
+  polygon,
+  polygonMumbai,
+  zora,
+  zoraTestnet
+} from 'wagmi/chains'
 import { publicProvider } from 'wagmi/providers/public'
 
 import ErrorBoundary from '../ErrorBoundary'
+import RainbowKit from './RainbowKit'
 
-const { chains, provider } = configureChains(
-  [IS_MAINNET ? polygon : polygonMumbai],
-  [
-    jsonRpcProvider({
-      rpc: () => ({
-        http: POLYGON_RPC_URL
-      })
-    }),
-    publicProvider()
-  ],
-  { targetQuorum: 1 }
-)
+// TEMP: Duplicate to fix signTypedData_v4 issue. Remove once fixed on WC+WAGMI end.
+const preferredChains = [
+  IS_MAINNET ? polygon : polygonMumbai,
+  IS_MAINNET ? polygon : polygonMumbai,
+  mainnet,
+  goerli,
+  zora,
+  zoraTestnet,
+  optimism,
+  optimismGoerli,
+  base,
+  baseGoerli
+]
+
+const { chains, publicClient } = configureChains(preferredChains, [
+  publicProvider()
+])
 
 const connectors = connectorsForWallets([
   {
-    groupName: 'Recommended',
+    groupName: 'Popular',
     wallets: [
-      injectedWallet({ chains, shimDisconnect: true }),
-      rainbowWallet({ chains }),
-      ledgerWallet({ chains }),
+      metaMaskWallet({ chains, projectId: WC_PROJECT_ID }),
+      rainbowWallet({ chains, projectId: WC_PROJECT_ID }),
+      ledgerWallet({ chains, projectId: WC_PROJECT_ID }),
       coinbaseWallet({ appName: LENSTUBE_APP_NAME, chains }),
-      walletConnectWallet({ chains })
+      walletConnectWallet({
+        chains,
+        projectId: WC_PROJECT_ID,
+        options: {
+          qrModalOptions: {
+            explorerExcludedWalletIds: 'ALL'
+          },
+          projectId: WC_PROJECT_ID
+        }
+      }),
+      injectedWallet({ chains, shimDisconnect: true })
     ]
   }
 ])
 
-const wagmiClient = createClient({
-  autoConnect: true,
-  connectors,
-  provider
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { refetchOnWindowFocus: false } }
 })
 
-// Enables usage of theme in RainbowKitProvider
-const RainbowKitProviderWrapper = ({ children }: { children: ReactNode }) => {
-  const { theme } = useTheme()
-  const themeOptions: ThemeOptions = {
-    fontStack: 'system',
-    overlayBlur: 'small',
-    accentColor: '#6366f1'
-  }
-  return (
-    <RainbowKitProvider
-      modalSize="compact"
-      chains={chains}
-      theme={
-        theme === 'dark' ? darkTheme(themeOptions) : lightTheme(themeOptions)
-      }
-    >
-      {children}
-    </RainbowKitProvider>
-  )
-}
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors,
+  publicClient
+})
 
 const Providers = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
@@ -92,13 +101,15 @@ const Providers = ({ children }: { children: ReactNode }) => {
     <I18nProvider i18n={i18n}>
       <ErrorBoundary>
         <LivepeerConfig client={getLivepeerClient()} theme={videoPlayerTheme}>
-          <WagmiConfig client={wagmiClient}>
-            <ThemeProvider defaultTheme="dark" attribute="class">
-              <RainbowKitProviderWrapper>
-                <ApolloProvider client={apolloClient}>
-                  {children}
+          <WagmiConfig config={wagmiConfig}>
+            <ThemeProvider defaultTheme="light" attribute="class">
+              <RainbowKit chains={chains}>
+                <ApolloProvider client={apolloClient(authLink)}>
+                  <QueryClientProvider client={queryClient}>
+                    {children}
+                  </QueryClientProvider>
                 </ApolloProvider>
-              </RainbowKitProviderWrapper>
+              </RainbowKit>
             </ThemeProvider>
           </WagmiConfig>
         </LivepeerConfig>

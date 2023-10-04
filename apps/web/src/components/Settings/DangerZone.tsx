@@ -1,50 +1,38 @@
 import { LENSHUB_PROXY_ABI } from '@abis/LensHubProxy'
-import IsVerified from '@components/Common/IsVerified'
+import Badge from '@components/Common/Badge'
 import { Button } from '@components/UIElements/Button'
-import { signOut } from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import { t } from '@lingui/macro'
-import { utils } from 'ethers'
-import type { CreateBurnProfileBroadcastItemResult } from 'lens'
-import { useCreateBurnProfileTypedDataMutation } from 'lens'
-import React, { useState } from 'react'
-import toast from 'react-hot-toast'
-import Custom404 from 'src/pages/404'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
 import {
   LENSHUB_PROXY_ADDRESS,
   REQUESTING_SIGNATURE_MESSAGE
-} from 'utils/constants'
-import type { CustomErrorWithData } from 'utils/custom-types'
-import formatNumber from 'utils/functions/formatNumber'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import omitKey from 'utils/functions/omitKey'
-import {
-  useContractWrite,
-  useSignTypedData,
-  useWaitForTransaction
-} from 'wagmi'
+} from '@lenstube/constants'
+import { formatNumber, getProfilePicture } from '@lenstube/generic'
+import type { CreateBurnProfileBroadcastItemResult } from '@lenstube/lens'
+import { useCreateBurnProfileTypedDataMutation } from '@lenstube/lens'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
+import { signOut } from '@lib/store/auth'
+import useChannelStore from '@lib/store/channel'
+import { t } from '@lingui/macro'
+import React, { useState } from 'react'
+import toast from 'react-hot-toast'
+import Custom404 from 'src/pages/404'
+import { useContractWrite, useWaitForTransaction } from 'wagmi'
 
 const DangerZone: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [txnHash, setTxnHash] = useState<`0x${string}`>()
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
-
-  const { signTypedDataAsync } = useSignTypedData({
-    onError(error) {
-      toast.error(error?.message)
-    }
-  })
+  const activeChannel = useChannelStore((state) => state.activeChannel)
+  const handleWrongNetwork = useHandleWrongNetwork()
 
   const onError = (error: CustomErrorWithData) => {
     setLoading(false)
     toast.error(error?.data?.message ?? error?.message)
   }
 
-  const { write: writeDeleteProfile } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENSHUB_PROXY_ADDRESS,
     abi: LENSHUB_PROXY_ABI,
-    functionName: 'burnWithSig',
-    mode: 'recklesslyUnprepared',
+    functionName: 'burn',
     onError,
     onSuccess: (data) => setTxnHash(data.hash)
   })
@@ -67,15 +55,8 @@ const DangerZone: React.FC = () => {
         data.createBurnProfileTypedData as CreateBurnProfileBroadcastItemResult
       try {
         toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-        const signature = await signTypedDataAsync({
-          domain: omitKey(typedData?.domain, '__typename'),
-          types: omitKey(typedData?.types, '__typename'),
-          value: omitKey(typedData?.value, '__typename')
-        })
-        const { tokenId } = typedData?.value
-        const { v, r, s } = utils.splitSignature(signature)
-        const sig = { v, r, s, deadline: typedData.value.deadline }
-        writeDeleteProfile?.({ recklesslySetUnpreparedArgs: [tokenId, sig] })
+        const { tokenId } = typedData.value
+        write?.({ args: [tokenId] })
       } catch {
         setLoading(false)
       }
@@ -84,15 +65,18 @@ const DangerZone: React.FC = () => {
   })
 
   const onClickDelete = () => {
+    if (handleWrongNetwork()) {
+      return
+    }
     setLoading(true)
     createBurnProfileTypedData({
       variables: {
-        request: { profileId: selectedChannel?.id }
+        request: { profileId: activeChannel?.id }
       }
     })
   }
 
-  if (!selectedChannel) {
+  if (!activeChannel) {
     return <Custom404 />
   }
 
@@ -102,29 +86,29 @@ const DangerZone: React.FC = () => {
         <div className="flex items-center">
           <div className="mr-3 mt-0.5 flex-none">
             <img
-              src={getProfilePicture(selectedChannel, 'avatar')}
+              src={getProfilePicture(activeChannel, 'AVATAR')}
               className="h-9 w-9 rounded-full"
               draggable={false}
-              alt={selectedChannel?.handle}
+              alt={activeChannel?.handle}
             />
           </div>
           <div className="flex flex-col">
-            {selectedChannel.name && (
-              <h6 className="font-medium">{selectedChannel.name}</h6>
+            {activeChannel.name && (
+              <h6 className="font-medium">{activeChannel.name}</h6>
             )}
             <span className="flex items-center space-x-1">
-              <span className="text-sm">{selectedChannel?.handle}</span>
-              <IsVerified id={selectedChannel?.id} size="xs" />
+              <span className="text-sm">{activeChannel?.handle}</span>
+              <Badge id={activeChannel?.id} size="xs" />
             </span>
           </div>
         </div>
         <div className="flex space-x-2">
           <span>
-            {formatNumber(selectedChannel.stats.totalPosts)}{' '}
+            {formatNumber(activeChannel.stats.totalPosts)}{' '}
             <small>publications</small>
           </span>
           <span>
-            {formatNumber(selectedChannel.stats.totalFollowers)}{' '}
+            {formatNumber(activeChannel.stats.totalFollowers)}{' '}
             <small>subscribers</small>
           </span>
         </div>

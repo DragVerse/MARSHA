@@ -1,21 +1,29 @@
-import type { Publication } from 'lens'
-import { PublicationDetailsDocument } from 'lens'
 import {
   FALLBACK_COVER_URL,
   LENSTUBE_APP_NAME,
   LENSTUBE_EMBED_URL,
+<<<<<<< HEAD
   LENSTUBE_WEBSITE_URL
 } from 'utils'
 import getApolloClient from 'utils/functions/getApolloClient'
 import getThumbnailUrl from 'utils/functions/getThumbnailUrl'
 import imageCdn from 'utils/functions/imageCdn'
 import truncate from 'utils/functions/truncate'
+=======
+  LENSTUBE_WEBSITE_URL,
+  OG_IMAGE
+} from '@lenstube/constants'
+import { getThumbnailUrl, imageCdn, truncate } from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
+import { PublicationDetailsDocument } from '@lenstube/lens'
+import { apolloClient } from '@lenstube/lens/apollo'
+>>>>>>> upstream/main
 
-const apolloClient = getApolloClient()
+const client = apolloClient()
 
 const getPublicationOembed = async (publicationId: string, format: string) => {
   try {
-    const { data } = await apolloClient.query({
+    const { data } = await client.query({
       query: PublicationDetailsDocument,
       variables: { request: { publicationId } }
     })
@@ -27,10 +35,14 @@ const getPublicationOembed = async (publicationId: string, format: string) => {
       '"',
       "'"
     )
+<<<<<<< HEAD
     const thumbnail = imageCdn(
       getThumbnailUrl(video) || `${FALLBACK_COVER_URL}`,
       'thumbnail'
     )
+=======
+    const thumbnail = imageCdn(getThumbnailUrl(video) || OG_IMAGE, 'THUMBNAIL')
+>>>>>>> upstream/main
 
     if (format === 'json') {
       return {

@@ -1,19 +1,20 @@
 {
   "name": "dragverse",
-  "description": "Decentralized video-sharing social media platform.",
-  "version": "1.0.0-beta",
+  "description": "Decentralized social media platform for Drag Creators and Communities",
+  "version": "1.0.5-beta",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*",
     "packages/workers/*",
+    "packages/helpers/*",
     "tests"
   ],
   "scripts": {
     "build": "turbo run build --parallel",
     "dev": "turbo run dev --parallel",
     "start": "turbo run start --parallel",
-    "codegen": "turbo run codegen",
+    "codegen": "turbo run codegen --parallel",
     "lint": "turbo run lint --parallel",
     "typecheck": "turbo run typecheck --parallel",
     "prepare": "husky install",
@@ -21,17 +22,17 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "dev:test": "turbo run dev:test",
     "e2e:test": "start-server-and-test start 4783 dev:test",
-    "i18n:extract": "turbo run extract"
+    "i18n:extract": "turbo run extract",
+    "mobile": "cd apps/mobile && yarn mobile:start"
   },
   "devDependencies": {
-    "danger": "11.2.6",
     "husky": "^8.0.3",
-    "start-server-and-test": "^2.0.0",
+    "start-server-and-test": "^2.0.1",
     "ts-node": "latest",
-    "turbo": "1.9.6"
+    "turbo": "1.10.13"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=16.18.1 <=19.0.0"
   },
   "packageManager": "yarn@1.22.19"
 }

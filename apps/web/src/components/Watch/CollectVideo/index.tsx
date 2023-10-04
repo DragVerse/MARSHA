@@ -1,7 +1,9 @@
 import { LENSHUB_PROXY_ABI } from '@abis/LensHubProxy'
 import CollectOutline from '@components/Common/Icons/CollectOutline'
-import { Loader } from '@components/UIElements/Loader'
+import type { ButtonVariants } from '@components/UIElements/Button'
+import { Button } from '@components/UIElements/Button'
 import Tooltip from '@components/UIElements/Tooltip'
+<<<<<<< HEAD
 import useAuthPersistStore from '@lib/store/auth'
 import useChannelStore from '@lib/store/channel'
 import { Trans, t } from '@lingui/macro'
@@ -9,11 +11,26 @@ import { useConnectModal } from '@rainbow-me/rainbowkit'
 import clsx from 'clsx'
 import { utils } from 'ethers'
 import type { CreateCollectBroadcastItemResult, Publication } from 'lens'
+=======
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  ERROR_MESSAGE,
+  LENSHUB_PROXY_ADDRESS,
+  REQUESTING_SIGNATURE_MESSAGE
+} from '@lenstube/constants'
+import { getSignature } from '@lenstube/generic'
+import type {
+  CreateCollectBroadcastItemResult,
+  Publication
+} from '@lenstube/lens'
+>>>>>>> upstream/main
 import {
   useBroadcastMutation,
   useCreateCollectTypedDataMutation,
   useProxyActionMutation,
   usePublicationCollectModuleQuery
+<<<<<<< HEAD
 } from 'lens'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -27,24 +44,47 @@ import {
 } from 'utils'
 import omitKey from 'utils/functions/omitKey'
 import { useAccount, useContractWrite, useSignTypedData } from 'wagmi'
+=======
+} from '@lenstube/lens'
+import type {
+  CustomErrorWithData,
+  LenstubeCollectModule
+} from '@lenstube/lens/custom-types'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
+import useChannelStore from '@lib/store/channel'
+import { t, Trans } from '@lingui/macro'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
+import type { FC } from 'react'
+import React, { useState } from 'react'
+import toast from 'react-hot-toast'
+import { useContractWrite, useSignTypedData } from 'wagmi'
+
+>>>>>>> upstream/main
 import CollectModal from './CollectModal'
 
 type Props = {
   video: Publication
-  variant?: 'hover'
+  variant?: ButtonVariants
+  text?: string
 }
 
+<<<<<<< HEAD
 const CollectVideo: React.FC<Props> = ({ video, variant }) => {
   const { address } = useAccount()
+=======
+const CollectVideo: FC<Props> = ({ video, variant = 'primary', text }) => {
+>>>>>>> upstream/main
   const { openConnectModal } = useConnectModal()
+  const handleWrongNetwork = useHandleWrongNetwork()
 
   const [loading, setLoading] = useState(false)
   const [showCollectModal, setShowCollectModal] = useState(false)
   const [alreadyCollected, setAlreadyCollected] = useState(
     video.hasCollectedByMe
   )
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
   const userSigNonce = useChannelStore((state) => state.userSigNonce)
   const setUserSigNonce = useChannelStore((state) => state.setUserSigNonce)
@@ -54,7 +94,10 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
     setLoading(false)
   }
 
-  const onCompleted = () => {
+  const onCompleted = (__typename?: 'RelayError' | 'RelayerResult') => {
+    if (__typename === 'RelayError') {
+      return
+    }
     setLoading(false)
     setAlreadyCollected(true)
     toast.success(t`Collected as NFT`)
@@ -72,24 +115,28 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
     data?.publication?.__typename === 'Post'
       ? (data?.publication?.collectModule as DragverseCollectModule)
       : null
+  const collectAmount =
+    collectModule?.amount?.value ?? collectModule?.fee?.amount?.value
+  const currency =
+    collectModule?.amount?.asset?.symbol ??
+    collectModule?.fee?.amount?.asset?.symbol
 
-  const { write: writeCollectWithSig } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENSHUB_PROXY_ADDRESS,
     abi: LENSHUB_PROXY_ABI,
-    functionName: 'collectWithSig',
-    mode: 'recklesslyUnprepared',
+    functionName: 'collect',
     onError,
-    onSuccess: onCompleted
+    onSuccess: () => onCompleted()
   })
 
   const [broadcast] = useBroadcastMutation({
     onError,
-    onCompleted
+    onCompleted: ({ broadcast }) => onCompleted(broadcast.__typename)
   })
 
   const [createProxyActionFreeCollect] = useProxyActionMutation({
     onError,
-    onCompleted
+    onCompleted: () => onCompleted()
   })
 
   const [createCollectTypedData] = useCreateCollectTypedDataMutation({
@@ -98,25 +145,14 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
         createCollectTypedData as CreateCollectBroadcastItemResult
       try {
         toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-        const signature = await signTypedDataAsync({
-          domain: omitKey(typedData?.domain, '__typename'),
-          types: omitKey(typedData?.types, '__typename'),
-          value: omitKey(typedData?.value, '__typename')
-        })
-        const { v, r, s } = utils.splitSignature(signature)
-        const args = {
-          collector: address,
-          profileId: typedData?.value.profileId,
-          pubId: typedData?.value.pubId,
-          data: typedData.value.data,
-          sig: { v, r, s, deadline: typedData.value.deadline }
-        }
+        const signature = await signTypedDataAsync(getSignature(typedData))
         setUserSigNonce(userSigNonce + 1)
         const { data } = await broadcast({
           variables: { request: { id, signature } }
         })
         if (data?.broadcast?.__typename === 'RelayError') {
-          writeCollectWithSig?.({ recklesslySetUnpreparedArgs: [args] })
+          const { profileId, pubId, data: collectData } = typedData.value
+          return write?.({ args: [profileId, pubId, collectData] })
         }
       } catch {
         setLoading(false)
@@ -124,9 +160,6 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
     },
     onError
   })
-
-  const isFreeCollect =
-    video.collectModule.__typename === 'FreeCollectModuleSettings'
 
   const createTypedData = async () => {
     await createCollectTypedData({
@@ -153,7 +186,7 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
   const collectNow = async () => {
     setShowCollectModal(false)
     setLoading(true)
-    if (isFreeCollect && !collectModule?.followerOnly) {
+    if (!Boolean(collectAmount) && !collectModule?.followerOnly) {
       Analytics.track(TRACK.PUBLICATION.COLLECT, { fee: false })
       await viaProxyAction()
     } else {
@@ -163,22 +196,26 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
   }
 
   const onClickCollect = () => {
-    if (!selectedChannelId) {
+    if (!selectedSimpleProfile?.id) {
       return openConnectModal?.()
     }
+    if (handleWrongNetwork()) {
+      return
+    }
+
     return setShowCollectModal(true)
   }
 
-  const collectTooltipText = isFreeCollect ? (
-    t`Collect as NFT`
-  ) : (
+  const collectTooltipText = collectAmount ? (
     <span>
       <Trans>Collect as NFT for</Trans>
       <b className="ml-1 space-x-1">
-        <span>{collectModule?.amount?.value}</span>
-        <span>{collectModule?.amount?.asset.symbol}</span>
+        <span>{collectAmount}</span>
+        <span>{currency}</span>
       </b>
     </span>
+  ) : (
+    t`Collect as NFT`
   )
 
   return (
@@ -205,17 +242,20 @@ const CollectVideo: React.FC<Props> = ({ video, variant }) => {
         placement="top"
       >
         <div>
-          <button
-            className={clsx('p-2.5', variant === 'hover' && 'btn-hover')}
+          <Button
+            variant={variant}
             disabled={loading || alreadyCollected}
             onClick={() => onClickCollect()}
+            icon={
+              loading ? (
+                <Loader size="md" />
+              ) : (
+                <CollectOutline className="h-5 w-5" />
+              )
+            }
           >
-            {loading ? (
-              <Loader size="md" />
-            ) : (
-              <CollectOutline className="h-5 w-5" />
-            )}
-          </button>
+            {text}
+          </Button>
         </div>
       </Tooltip>
     </div>

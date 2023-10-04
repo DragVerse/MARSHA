@@ -3,15 +3,17 @@ import TagOutline from '@components/Common/Icons/TagOutline'
 import ArweaveExplorerLink from '@components/Common/Links/ArweaveExplorerLink'
 import IPFSLink from '@components/Common/Links/IPFSLink'
 import TokenExplorerLink from '@components/Common/Links/TokenExplorerLink'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  getCategoryName,
+  getIsIPFSUrl,
+  getMetadataCid
+} from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import { Trans } from '@lingui/macro'
-import type { Publication } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
-import { Analytics, TRACK } from 'utils'
-import getCategoryName from 'utils/functions/getCategoryName'
-import getMetadataHash from 'utils/functions/getMetadataHash'
-import { getIsIPFSUrl } from 'utils/functions/getPublicationMediaUrl'
 
 type Props = {
   video: Publication
@@ -36,10 +38,11 @@ const MetaInfo: FC<Props> = ({ video }) => {
       {video?.metadata?.tags[0] && <span className="middot" />}
 
       {isIPFS ? (
-        <IPFSLink hash={getMetadataHash(video)}>
+        <IPFSLink hash={getMetadataCid(video)}>
           <div
             onClick={() => Analytics.track(TRACK.CLICK_VIEW_METADATA)}
             className="flex items-center space-x-1"
+            tabIndex={0}
             role="button"
           >
             <div className="whitespace-nowrap text-sm">
@@ -49,9 +52,10 @@ const MetaInfo: FC<Props> = ({ video }) => {
           </div>
         </IPFSLink>
       ) : (
-        <ArweaveExplorerLink txId={getMetadataHash(video)}>
+        <ArweaveExplorerLink txId={getMetadataCid(video)}>
           <div
             onClick={() => Analytics.track(TRACK.CLICK_VIEW_METADATA)}
+            tabIndex={0}
             className="flex items-center space-x-1"
             role="button"
           >
@@ -65,6 +69,7 @@ const MetaInfo: FC<Props> = ({ video }) => {
       {video.collectNftAddress && (
         <div
           onClick={() => Analytics.track(TRACK.CLICK_VIEW_TOKEN)}
+          tabIndex={0}
           className="hidden items-center space-x-1 md:flex"
           role="button"
         >
@@ -82,6 +87,7 @@ const MetaInfo: FC<Props> = ({ video }) => {
       {video.dataAvailabilityProofs && (
         <div
           onClick={() => Analytics.track(TRACK.CLICK_VIEW_PROOF)}
+          tabIndex={0}
           className="hidden items-center space-x-1 md:flex"
           role="button"
         >

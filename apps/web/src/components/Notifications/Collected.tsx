@@ -1,15 +1,18 @@
-import IsVerified from '@components/Common/IsVerified'
+import Badge from '@components/Common/Badge'
 import AddressExplorerLink from '@components/Common/Links/AddressExplorerLink'
+import {
+  getProfilePicture,
+  getRandomProfilePicture,
+  imageCdn,
+  shortenAddress,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { NewCollectNotification } from '@lenstube/lens'
+import { getRelativeTime } from '@lib/formatTime'
 import { t, Trans } from '@lingui/macro'
-import type { NewCollectNotification } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
-import { getRelativeTime } from 'utils/functions/formatTime'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import { getRandomProfilePicture } from 'utils/functions/getRandomProfilePicture'
-import imageCdn from 'utils/functions/imageCdn'
-import { shortenAddress } from 'utils/functions/shortenAddress'
 
 interface Props {
   notification: NewCollectNotification
@@ -21,24 +24,25 @@ const CollectedNotification: FC<Props> = ({ notification }) => {
       <div className="flex items-center space-x-3">
         {notification?.wallet?.defaultProfile ? (
           <Link
-            href={`/channel/${notification?.wallet?.defaultProfile?.handle}`}
+            href={`/channel/${trimLensHandle(
+              notification?.wallet?.defaultProfile?.handle
+            )}`}
             className="font-base inline-flex items-center space-x-1.5"
           >
             <img
               className="h-5 w-5 rounded-full"
               src={getProfilePicture(
                 notification.wallet?.defaultProfile,
-                'avatar'
+                'AVATAR'
               )}
               alt={notification.wallet?.defaultProfile?.handle}
               draggable={false}
             />
             <div className="flex items-center space-x-0.5">
-              <span>{notification?.wallet?.defaultProfile?.handle}</span>
-              <IsVerified
-                id={notification?.wallet?.defaultProfile?.id}
-                size="xs"
-              />
+              <span>
+                {trimLensHandle(notification?.wallet?.defaultProfile?.handle)}
+              </span>
+              <Badge id={notification?.wallet?.defaultProfile?.id} size="xs" />
             </div>
           </Link>
         ) : (
@@ -48,7 +52,7 @@ const CollectedNotification: FC<Props> = ({ notification }) => {
                 className="h-5 w-5 rounded-full"
                 src={imageCdn(
                   getRandomProfilePicture(notification.wallet.address),
-                  'avatar'
+                  'AVATAR'
                 )}
                 alt={notification.wallet?.address}
                 draggable={false}

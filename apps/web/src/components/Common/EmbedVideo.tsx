@@ -1,10 +1,16 @@
 import Modal from '@components/UIElements/Modal'
 import Tooltip from '@components/UIElements/Tooltip'
+import { Analytics, TRACK, useCopyToClipboard } from '@lenstube/browser'
+import { LENSTUBE_EMBED_URL } from '@lenstube/constants'
 import { t } from '@lingui/macro'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
+<<<<<<< HEAD
 import { Analytics, LENSTUBE_EMBED_URL, TRACK } from 'utils'
 import useCopyToClipboard from 'utils/hooks/useCopyToClipboard'
+=======
+
+>>>>>>> upstream/main
 import CodeOutline from './Icons/CodeOutline'
 
 type Props = {

@@ -1,28 +1,38 @@
 import Alert from '@components/Common/Alert'
 import AddressExplorerLink from '@components/Common/Links/AddressExplorerLink'
 import { Button } from '@components/UIElements/Button'
-import { Loader } from '@components/UIElements/Loader'
 import Modal from '@components/UIElements/Modal'
 import Tooltip from '@components/UIElements/Tooltip'
-import useAuthPersistStore from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import { t, Trans } from '@lingui/macro'
-import dayjs from 'dayjs'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  formatNumber,
+  getProfilePicture,
+  getRandomProfilePicture,
+  imageCdn,
+  shortenAddress,
+  trimLensHandle
+} from '@lenstube/generic'
 import type {
   ApprovedAllowanceAmount,
   Profile,
   Publication,
   RecipientDataOutput
-} from 'lens'
+} from '@lenstube/lens'
 import {
   CollectModules,
   useAllProfilesQuery,
   useApprovedModuleAllowanceAmountQuery,
   usePublicationRevenueQuery
-} from 'lens'
+} from '@lenstube/lens'
+import type { LenstubeCollectModule } from '@lenstube/lens/custom-types'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
+import { t, Trans } from '@lingui/macro'
+import dayjs from 'dayjs'
 import Link from 'next/link'
 import type { Dispatch } from 'react'
 import React, { useEffect, useState } from 'react'
+<<<<<<< HEAD
 import type { DragverseCollectModule } from 'utils'
 import { Analytics, TRACK } from 'utils'
 import formatNumber from 'utils/functions/formatNumber'
@@ -30,6 +40,8 @@ import getProfilePicture from 'utils/functions/getProfilePicture'
 import { getRandomProfilePicture } from 'utils/functions/getRandomProfilePicture'
 import imageCdn from 'utils/functions/imageCdn'
 import { shortenAddress } from 'utils/functions/shortenAddress'
+=======
+>>>>>>> upstream/main
 import { useBalance } from 'wagmi'
 import BalanceAlert from './BalanceAlert'
 import PermissionAlert from './PermissionAlert'
@@ -53,9 +65,8 @@ const CollectModal: React.FC<Props> = ({
   collectModule,
   fetchingCollectModule
 }) => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
 
   const [isAllowed, setIsAllowed] = useState(true)
@@ -64,6 +75,24 @@ const CollectModal: React.FC<Props> = ({
     video.profile?.followModule?.__typename === 'FeeFollowModuleSettings'
   const isFreeCollect =
     video.collectModule.__typename === 'FreeCollectModuleSettings'
+
+  const amount =
+    collectModule?.amount?.value ?? collectModule?.fee?.amount?.value
+  const currency =
+    collectModule?.amount?.asset?.symbol ??
+    collectModule?.fee?.amount?.asset?.symbol
+  const assetAddress =
+    collectModule?.amount?.asset?.address ??
+    collectModule?.fee?.amount?.asset?.address
+  const assetDecimals =
+    collectModule?.amount?.asset?.decimals ??
+    collectModule?.fee?.amount?.asset?.decimals
+  const referralFee =
+    collectModule?.referralFee ?? collectModule?.fee?.referralFee
+  const collectLimit =
+    collectModule?.collectLimit ?? collectModule?.optionalCollectLimit
+  const endTimestamp =
+    collectModule?.endTimestamp ?? collectModule?.optionalEndTimestamp
 
   useEffect(() => {
     Analytics.track(TRACK.OPEN_COLLECT)
@@ -84,11 +113,11 @@ const CollectModal: React.FC<Props> = ({
   })
 
   const { data: balanceData, isLoading: balanceLoading } = useBalance({
-    address: selectedChannel?.ownedBy,
-    token: collectModule?.amount?.asset?.address,
-    formatUnits: collectModule?.amount?.asset?.decimals,
-    watch: Boolean(collectModule?.amount),
-    enabled: Boolean(collectModule?.amount)
+    address: selectedSimpleProfile?.ownedBy,
+    token: assetAddress,
+    formatUnits: assetDecimals,
+    watch: Boolean(amount),
+    enabled: Boolean(amount)
   })
 
   const { data: revenueData } = usePublicationRevenueQuery({
@@ -107,13 +136,13 @@ const CollectModal: React.FC<Props> = ({
   } = useApprovedModuleAllowanceAmountQuery({
     variables: {
       request: {
-        currencies: collectModule?.amount?.asset?.address,
+        currencies: assetAddress,
         followModules: [],
         collectModules: [collectModule?.type],
         referenceModules: []
       }
     },
-    skip: !collectModule?.amount?.asset?.address || !selectedChannelId,
+    skip: !assetAddress || !selectedSimpleProfile?.id,
     onCompleted: (data) => {
       setIsAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance !== '0x00')
     }
@@ -122,24 +151,22 @@ const CollectModal: React.FC<Props> = ({
   useEffect(() => {
     if (
       balanceData &&
-      collectModule?.amount &&
-      parseFloat(balanceData?.formatted) <
-        parseFloat(collectModule?.amount?.value)
+      amount &&
+      parseFloat(balanceData?.formatted) < parseFloat(amount)
     ) {
       setHaveEnoughBalance(false)
     } else {
       setHaveEnoughBalance(true)
     }
-    if (collectModule?.amount?.asset?.address && selectedChannelId) {
+    if (assetAddress && selectedSimpleProfile?.id) {
       refetchAllowance()
     }
   }, [
     balanceData,
-    collectModule,
-    collectModule?.amount?.value,
-    collectModule?.amount,
+    assetAddress,
+    amount,
     refetchAllowance,
-    selectedChannelId
+    selectedSimpleProfile
   ])
 
   const getDefaultProfileByAddress = (address: string) => {
@@ -170,7 +197,7 @@ const CollectModal: React.FC<Props> = ({
         defaultProfile
           ? getProfilePicture(defaultProfile)
           : getRandomProfilePicture(splitRecipient.recipient),
-        'avatar'
+        'AVATAR'
       )
       const label =
         defaultProfile?.handle ?? shortenAddress(splitRecipient?.recipient)
@@ -188,12 +215,14 @@ const CollectModal: React.FC<Props> = ({
             <Tooltip
               placement="bottom-start"
               visible={hasManyProfiles}
-              content={handles?.map((handle) => (
-                <p key={handle}>{handle}</p>
-              ))}
+              content={handles?.map((handle) => <p key={handle}>{handle}</p>)}
             >
               {defaultProfile?.handle ? (
-                <Link href={`/channel/${defaultProfile.handle}`}>{label}</Link>
+                <Link
+                  href={`/channel/${trimLensHandle(defaultProfile.handle)}`}
+                >
+                  {label}
+                </Link>
               ) : (
                 <AddressExplorerLink address={splitRecipient?.recipient}>
                   <span>{label}</span>
@@ -214,7 +243,7 @@ const CollectModal: React.FC<Props> = ({
       onClose={() => setShowModal(false)}
       show={showModal}
     >
-      <div className="mt-4">
+      <div className="mt-2">
         {!fetchingCollectModule && !allowanceLoading ? (
           <>
             <div className="mb-3 flex flex-col">
@@ -224,48 +253,30 @@ const CollectModal: React.FC<Props> = ({
               <span className="space-x-1">
                 <span className="text-lg">
                   {formatNumber(video?.stats.totalAmountOfCollects)}
-                  {collectModule?.collectLimit && (
-                    <span> / {collectModule?.collectLimit}</span>
-                  )}
+                  {collectLimit && <span> / {collectLimit}</span>}
                 </span>
               </span>
             </div>
-            {collectModule?.amount ? (
+            {amount ? (
               <div className="mb-3 flex flex-col">
                 <span className="text-sm font-semibold">
                   <Trans>Price</Trans>
                 </span>
                 <span className="space-x-1">
-                  <span className="text-2xl font-semibold">
-                    {collectModule?.amount?.value}
-                  </span>
-                  <span>{collectModule?.amount?.asset.symbol}</span>
+                  <span className="text-2xl font-semibold">{amount}</span>
+                  <span>{currency}</span>
                 </span>
               </div>
             ) : null}
-            {collectModule?.endTimestamp ||
-            collectModule?.optionalEndTimestamp ? (
+            {endTimestamp ? (
               <div className="mb-3 flex flex-col">
                 <span className="mb-0.5 text-sm font-semibold">
                   <Trans>Ends At</Trans>
                 </span>
-                {collectModule.endTimestamp && (
-                  <span className="text-lg">
-                    {dayjs(collectModule.endTimestamp).format('MMMM DD, YYYY')}{' '}
-                    at {dayjs(collectModule.endTimestamp).format('hh:mm a')}
-                  </span>
-                )}
-                {collectModule.optionalEndTimestamp && (
-                  <span className="text-lg">
-                    {dayjs(collectModule.optionalEndTimestamp).format(
-                      'MMMM DD, YYYY'
-                    )}{' '}
-                    at{' '}
-                    {dayjs(collectModule.optionalEndTimestamp).format(
-                      'hh:mm a'
-                    )}
-                  </span>
-                )}
+                <span className="text-lg">
+                  {dayjs(endTimestamp).format('MMMM DD, YYYY')} at{' '}
+                  {dayjs(endTimestamp).format('hh:mm a')}
+                </span>
               </div>
             ) : null}
             {revenueData?.publicationRevenue ? (
@@ -282,21 +293,21 @@ const CollectModal: React.FC<Props> = ({
                 </span>
               </div>
             ) : null}
-            {collectModule?.referralFee ? (
+            {referralFee ? (
               <div className="mb-3 flex flex-col">
                 <span className="mb-0.5 text-sm font-semibold">
                   <Trans>Referral Fee</Trans>
                 </span>
-                <span className="text-lg">{collectModule.referralFee} %</span>
+                <span className="text-lg">{referralFee} %</span>
               </div>
             ) : null}
             {isRecipientAvailable ? (
               <div className="mb-3 flex flex-col">
                 <span className="mb-0.5 text-sm font-semibold">
-                  <Trans>Revenue</Trans>
+                  <Trans>Revenue</Trans>{' '}
                   {collectModule.recipients?.length
-                    ? t` Recipients`
-                    : t` Recipient`}
+                    ? t`Recipients`
+                    : t`Recipient`}
                 </span>
                 {collectModule.recipient &&
                   renderRecipients([

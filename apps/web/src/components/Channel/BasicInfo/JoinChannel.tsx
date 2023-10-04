@@ -1,45 +1,57 @@
 import { LENSHUB_PROXY_ABI } from '@abis/LensHubProxy'
+import SuperFollowOutline from '@components/Common/Icons/SuperFollowOutline'
+import type { ButtonSizes, ButtonVariants } from '@components/UIElements/Button'
 import { Button } from '@components/UIElements/Button'
 import Tooltip from '@components/UIElements/Tooltip'
-import useAuthPersistStore from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import { t, Trans } from '@lingui/macro'
-import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { utils } from 'ethers'
-import type { FeeFollowModuleSettings, Profile } from 'lens'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  ERROR_MESSAGE,
+  LENSHUB_PROXY_ADDRESS,
+  REQUESTING_SIGNATURE_MESSAGE
+} from '@lenstube/constants'
+import { getSignature } from '@lenstube/generic'
+import type { FeeFollowModuleSettings, Profile } from '@lenstube/lens'
 import {
   FollowModules,
   useApprovedModuleAllowanceAmountQuery,
   useBroadcastMutation,
   useCreateFollowTypedDataMutation,
   useProfileFollowModuleQuery
-} from 'lens'
+} from '@lenstube/lens'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
+import useAuthPersistStore from '@lib/store/auth'
+import useChannelStore from '@lib/store/channel'
+import { t, Trans } from '@lingui/macro'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
+import clsx from 'clsx'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
-import type { CustomErrorWithData } from 'utils'
-import {
-  Analytics,
-  ERROR_MESSAGE,
-  LENSHUB_PROXY_ADDRESS,
-  REQUESTING_SIGNATURE_MESSAGE,
-  TRACK
-} from 'utils'
-import omitKey from 'utils/functions/omitKey'
-import { useContractWrite, useSigner, useSignTypedData } from 'wagmi'
+import { useContractWrite, useSignTypedData } from 'wagmi'
 
 type Props = {
   channel: Profile
   onJoin: () => void
+  variant?: ButtonVariants
+  size?: ButtonSizes
+  showText?: boolean
 }
 
-const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
+const JoinChannel: FC<Props> = ({
+  channel,
+  onJoin,
+  variant = 'primary',
+  size = 'md',
+  showText = true
+}) => {
   const [loading, setLoading] = useState(false)
   const [isAllowed, setIsAllowed] = useState(false)
   const { openConnectModal } = useConnectModal()
+  const handleWrongNetwork = useHandleWrongNetwork()
 
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
   const userSigNonce = useChannelStore((state) => state.userSigNonce)
   const setUserSigNonce = useChannelStore((state) => state.setUserSigNonce)
@@ -49,7 +61,10 @@ const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
     setLoading(false)
   }
 
-  const onCompleted = () => {
+  const onCompleted = (__typename?: 'RelayError' | 'RelayerResult') => {
+    if (__typename === 'RelayError') {
+      return
+    }
     onJoin()
     toast.success(`Joined ${channel.handle}`)
     setLoading(false)
@@ -62,19 +77,17 @@ const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
   const { signTypedDataAsync } = useSignTypedData({
     onError
   })
-  const { data: signer } = useSigner({ onError })
 
-  const { write: writeJoinChannel } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENSHUB_PROXY_ADDRESS,
     abi: LENSHUB_PROXY_ABI,
-    functionName: 'followWithSig',
-    mode: 'recklesslyUnprepared',
-    onSuccess: onCompleted,
+    functionName: 'follow',
+    onSuccess: () => onCompleted(),
     onError
   })
 
   const [broadcast] = useBroadcastMutation({
-    onCompleted,
+    onCompleted: ({ broadcast }) => onCompleted(broadcast.__typename),
     onError
   })
 
@@ -95,7 +108,7 @@ const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
         referenceModules: []
       }
     },
-    skip: !followModule?.amount?.asset?.address || !selectedChannelId,
+    skip: !followModule?.amount?.asset?.address || !selectedSimpleProfile?.id,
     onCompleted: (data) => {
       setIsAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance !== '0x00')
     }
@@ -106,29 +119,14 @@ const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
       const { typedData, id } = createFollowTypedData
       try {
         toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-        const signature = await signTypedDataAsync({
-          domain: omitKey(typedData?.domain, '__typename'),
-          types: omitKey(typedData?.types, '__typename'),
-          value: omitKey(typedData?.value, '__typename')
-        })
-        const { v, r, s } = utils.splitSignature(signature)
-        const args = {
-          follower: signer?.getAddress(),
-          profileIds: typedData.value.profileIds,
-          datas: typedData.value.datas,
-          sig: {
-            v,
-            r,
-            s,
-            deadline: typedData.value.deadline
-          }
-        }
+        const signature = await signTypedDataAsync(getSignature(typedData))
         setUserSigNonce(userSigNonce + 1)
         const { data } = await broadcast({
           variables: { request: { id, signature } }
         })
         if (data?.broadcast.__typename === 'RelayError') {
-          writeJoinChannel?.({ recklesslySetUnpreparedArgs: [args] })
+          const { profileIds, datas } = typedData.value
+          return write?.({ args: [profileIds, datas] })
         }
       } catch {
         setLoading(false)
@@ -138,9 +136,13 @@ const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
   })
 
   const joinChannel = () => {
-    if (!selectedChannelId) {
+    if (!selectedSimpleProfile?.id) {
       return openConnectModal?.()
     }
+    if (handleWrongNetwork()) {
+      return
+    }
+
     if (!isAllowed) {
       return toast.error(
         `Goto Settings -> Permissions and allow fee follow module for ${followModule?.amount?.asset?.symbol}.`
@@ -184,8 +186,23 @@ const JoinChannel: FC<Props> = ({ channel, onJoin }) => {
   return (
     <Tooltip content={joinTooltipText} placement="top">
       <span>
-        <Button onClick={() => joinChannel()} loading={loading}>
-          <Trans>Join Channel</Trans>
+        <Button
+          variant={variant}
+          size={size}
+          onClick={() => joinChannel()}
+          loading={loading}
+          icon={
+            <SuperFollowOutline
+              className={clsx({
+                'h-2.5 w-2.5': size === 'sm',
+                'h-3.5 w-3.5': size === 'md',
+                'h-4 w-4': size === 'lg',
+                'h-5 w-5': size === 'xl'
+              })}
+            />
+          }
+        >
+          {showText && <Trans>Join Channel</Trans>}
         </Button>
       </span>
     </Tooltip>

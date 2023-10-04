@@ -3,30 +3,31 @@ import FireOutline from '@components/Common/Icons/FireOutline'
 import MirrorOutline from '@components/Common/Icons/MirrorOutline'
 import Timeline from '@components/Home/Timeline'
 import TimelineShimmer from '@components/Shimmers/TimelineShimmer'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
 import { Tab } from '@headlessui/react'
-import useAppStore from '@lib/store'
-import { t, Trans } from '@lingui/macro'
-import clsx from 'clsx'
-import type { Publication } from 'lens'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  ALLOWED_APP_IDS,
+  IS_MAINNET,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_BYTES_APP_ID,
+  SCROLL_ROOT_MARGIN
+} from '@lenstube/constants'
+import type { Publication } from '@lenstube/lens'
 import {
   PublicationMainFocus,
   PublicationSortCriteria,
   PublicationTypes,
   useExploreQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import useAppStore from '@lib/store'
+import useAuthPersistStore from '@lib/store/auth'
+import { t, Trans } from '@lingui/macro'
+import clsx from 'clsx'
 import React, { useState } from 'react'
 import { useInView } from 'react-cool-inview'
-import {
-  ALLOWED_APP_IDS,
-  Analytics,
-  LENS_CUSTOM_FILTERS,
-  LENSTUBE_APP_ID,
-  LENSTUBE_BYTES_APP_ID,
-  SCROLL_ROOT_MARGIN,
-  TRACK
-} from 'utils'
 
 const initialCriteria = {
   trending: true,
@@ -37,6 +38,9 @@ const initialCriteria = {
 const ExploreFeed = () => {
   const [activeCriteria, setActiveCriteria] = useState(initialCriteria)
   const activeTagFilter = useAppStore((state) => state.activeTagFilter)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const getCriteria = () => {
     if (activeCriteria.trending) {
@@ -55,7 +59,9 @@ const ExploreFeed = () => {
     sortCriteria: getCriteria(),
     limit: 32,
     noRandomize: true,
-    sources: [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS],
+    sources: IS_MAINNET
+      ? [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS]
+      : undefined,
     publicationTypes: [PublicationTypes.Post],
     customFilters: LENS_CUSTOM_FILTERS,
     metadata: {
@@ -67,7 +73,8 @@ const ExploreFeed = () => {
 
   const { data, loading, error, fetchMore } = useExploreQuery({
     variables: {
-      request
+      request,
+      channelId: selectedSimpleProfile?.id ?? null
     }
   })
 
@@ -82,7 +89,8 @@ const ExploreFeed = () => {
           request: {
             ...request,
             cursor: pageInfo?.next
-          }
+          },
+          channelId: selectedSimpleProfile?.id ?? null
         }
       })
     }

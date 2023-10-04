@@ -1,14 +1,13 @@
+import { LENSTUBE_BYTES_APP_ID } from '@lenstube/constants'
+import { getProfilePicture, trimLensHandle } from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
+import { getRelativeTime } from '@lib/formatTime'
 import { Trans } from '@lingui/macro'
-import type { Publication } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React, { useState } from 'react'
-import { LENSTUBE_BYTES_APP_ID } from 'utils'
-import { getRelativeTime } from 'utils/functions/formatTime'
-import getLensHandle from 'utils/functions/getLensHandle'
-import getProfilePicture from 'utils/functions/getProfilePicture'
 
-import IsVerified from '../IsVerified'
+import Badge from '../Badge'
 import ReportModal from './ReportModal'
 import ShareModal from './ShareModal'
 import ThumbnailImage from './ThumbnailImage'
@@ -53,7 +52,7 @@ const VideoCard: FC<Props> = ({ video }) => {
           <div className="py-2">
             <div className="flex items-start space-x-2.5">
               <Link
-                href={`/channel/${getLensHandle(video.profile?.handle)}`}
+                href={`/channel/${trimLensHandle(video.profile?.handle)}`}
                 className="mt-0.5 flex-none"
               >
                 <img
@@ -80,12 +79,12 @@ const VideoCard: FC<Props> = ({ video }) => {
                   />
                 </div>
                 <Link
-                  href={`/channel/${video.profile?.handle}`}
+                  href={`/channel/${trimLensHandle(video.profile?.handle)}`}
                   className="flex w-fit items-center space-x-0.5 text-[13px] opacity-70 hover:opacity-100"
                   data-testid="video-card-channel"
                 >
-                  <span>{video.profile?.handle}</span>
-                  <IsVerified id={video.profile?.id} size="xs" />
+                  <span>{trimLensHandle(video.profile?.handle)}</span>
+                  <Badge id={video.profile?.id} size="xs" />
                 </Link>
                 <div className="flex items-center overflow-hidden text-xs opacity-70">
                   <span className="whitespace-nowrap">

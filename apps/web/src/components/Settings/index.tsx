@@ -1,23 +1,21 @@
 import MetaTags from '@components/Common/MetaTags'
 import SettingsShimmer from '@components/Shimmers/SettingsShimmer'
-import useChannelStore from '@lib/store/channel'
+import { Analytics, TRACK } from '@lenstube/browser'
+import type { MediaSet, Profile } from '@lenstube/lens'
+import { useProfileQuery } from '@lenstube/lens'
+import useAuthPersistStore from '@lib/store/auth'
 import { t } from '@lingui/macro'
-import type { MediaSet, Profile } from 'lens'
-import { useProfileQuery } from 'lens'
-import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import React, { useEffect } from 'react'
 import Custom404 from 'src/pages/404'
 import Custom500 from 'src/pages/500'
-import { Analytics, TRACK } from 'utils'
 
 import BasicInfo from './BasicInfo'
+import DangerZone from './DangerZone'
+import Membership from './Membership'
+import Permissions from './Permissions'
 import ProfileInterests from './ProfileInterests'
 import SideNav from './SideNav'
-
-const Permissions = dynamic(() => import('./Permissions'))
-const Membership = dynamic(() => import('./Membership'))
-const DangerZone = dynamic(() => import('./DangerZone'))
 
 export const SETTINGS_MEMBERSHIP = '/settings/membership'
 export const SETTINGS_INTERESTS = '/settings/interests'
@@ -27,7 +25,9 @@ export const SETTINGS = '/settings'
 
 const Settings = () => {
   const router = useRouter()
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   useEffect(() => {
     Analytics.track('Pageview', { path: TRACK.PAGE_VIEW.SETTINGS })
@@ -35,9 +35,9 @@ const Settings = () => {
 
   const { data, loading, error } = useProfileQuery({
     variables: {
-      request: { handle: selectedChannel?.handle }
+      request: { handle: selectedSimpleProfile?.handle }
     },
-    skip: !selectedChannel?.handle
+    skip: !selectedSimpleProfile?.handle
   })
 
   if (error) {
@@ -47,7 +47,7 @@ const Settings = () => {
     return <SettingsShimmer />
   }
 
-  if (!data?.profile || (!selectedChannel && router.isReady)) {
+  if (!data?.profile || (!selectedSimpleProfile && router.isReady)) {
     return <Custom404 />
   }
 

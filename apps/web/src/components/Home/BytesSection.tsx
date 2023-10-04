@@ -2,32 +2,36 @@ import BytesOutline from '@components/Common/Icons/BytesOutline'
 import ChevronLeftOutline from '@components/Common/Icons/ChevronLeftOutline'
 import ChevronRightOutline from '@components/Common/Icons/ChevronRightOutline'
 import BytesShimmer from '@components/Shimmers/BytesShimmer'
-import useAppStore from '@lib/store'
-import { Trans } from '@lingui/macro'
-import type { Publication } from 'lens'
+import {
+  FALLBACK_COVER_URL,
+  LENS_CUSTOM_FILTERS,
+  LENSTUBE_BYTES_APP_ID
+} from '@lenstube/constants'
+import {
+  getProfilePicture,
+  getThumbnailUrl,
+  imageCdn,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Publication } from '@lenstube/lens'
 import {
   PublicationMainFocus,
   PublicationSortCriteria,
   PublicationTypes,
   useExploreQuery
-} from 'lens'
+} from '@lenstube/lens'
+import useAppStore from '@lib/store'
+import useAuthPersistStore from '@lib/store/auth'
+import { Trans } from '@lingui/macro'
 import Link from 'next/link'
 import React, { useRef } from 'react'
-import {
-  FALLBACK_COVER_URL,
-  LENS_CUSTOM_FILTERS,
-  LENSTUBE_BYTES_APP_ID
-} from 'utils'
-import { generateVideoThumbnail } from 'utils/functions/generateVideoThumbnails'
-import getLensHandle from 'utils/functions/getLensHandle'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import { getPublicationMediaUrl } from 'utils/functions/getPublicationMediaUrl'
-import getThumbnailUrl from 'utils/functions/getThumbnailUrl'
-import imageCdn from 'utils/functions/imageCdn'
 
 const BytesSection = () => {
   const sectionRef = useRef<HTMLDivElement>(null)
   const activeTagFilter = useAppStore((state) => state.activeTagFilter)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const request = {
     sortCriteria: PublicationSortCriteria.CuratedProfiles,
@@ -44,7 +48,7 @@ const BytesSection = () => {
   }
 
   const { data, error, loading } = useExploreQuery({
-    variables: { request }
+    variables: { request, channelId: selectedSimpleProfile?.id ?? null }
   })
 
   const bytes = data?.explorePublications?.items as Publication[]
@@ -67,7 +71,7 @@ const BytesSection = () => {
   }
 
   return (
-    <div className="hidden lg:block" data-testid="bytes-section">
+    <div className="hidden md:block" data-testid="bytes-section">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <BytesOutline className="h-4 w-4" />
@@ -103,19 +107,12 @@ const BytesSection = () => {
                   <img
                     className="h-full rounded-xl object-cover"
                     src={
-                      thumbnailUrl ? imageCdn(thumbnailUrl, 'thumbnail_v') : ''
+                      thumbnailUrl ? imageCdn(thumbnailUrl, 'THUMBNAIL_V') : ''
                     }
                     alt="thumbnail"
                     draggable={false}
-                    onError={async ({ currentTarget }) => {
+                    onError={({ currentTarget }) => {
                       currentTarget.src = FALLBACK_COVER_URL
-                      const thumbnail = await generateVideoThumbnail(
-                        getPublicationMediaUrl(byte)
-                      )
-                      currentTarget.onerror = null
-                      if (thumbnail?.includes('base64')) {
-                        currentTarget.src = thumbnail
-                      }
                     }}
                   />
                 </div>
@@ -125,14 +122,14 @@ const BytesSection = () => {
               </Link>
               <div className="flex items-end space-x-1.5">
                 <Link
-                  href={`/channel/${getLensHandle(byte.profile?.handle)}`}
+                  href={`/channel/${trimLensHandle(byte.profile?.handle)}`}
                   className="flex-none"
-                  title={getLensHandle(byte.profile.handle)}
+                  title={byte.profile.handle}
                 >
                   <img
                     className="h-3.5 w-3.5 rounded-full bg-gray-200 dark:bg-gray-800"
-                    src={getProfilePicture(byte.profile, 'avatar')}
-                    alt={getLensHandle(byte.profile?.handle)}
+                    src={getProfilePicture(byte.profile, 'AVATAR')}
+                    alt={byte.profile?.handle}
                     draggable={false}
                   />
                 </Link>

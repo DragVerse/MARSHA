@@ -1,20 +1,29 @@
 import { LENSHUB_PROXY_ABI } from '@abis/LensHubProxy'
-import { useApolloClient } from '@apollo/client'
 import { Button } from '@components/UIElements/Button'
 import EmojiPicker from '@components/UIElements/EmojiPicker'
 import InputMentions from '@components/UIElements/InputMentions'
 import { zodResolver } from '@hookform/resolvers/zod'
-import useAuthPersistStore from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import usePersistStore from '@lib/store/persist'
-import { t, Trans } from '@lingui/macro'
-import { utils } from 'ethers'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import { Analytics, getUserLocale, TRACK } from '@lenstube/browser'
+import {
+  ERROR_MESSAGE,
+  LENSHUB_PROXY_ADDRESS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_WEBSITE_URL,
+  REQUESTING_SIGNATURE_MESSAGE
+} from '@lenstube/constants'
+import {
+  getProfilePicture,
+  getSignature,
+  trimify,
+  uploadToAr
+} from '@lenstube/generic'
 import type {
   CreateCommentBroadcastItemResult,
   CreateDataAvailabilityCommentRequest,
   CreatePublicCommentRequest,
   Publication
-} from 'lens'
+} from '@lenstube/lens'
 import {
   PublicationDetailsDocument,
   PublicationMainFocus,
@@ -26,29 +35,22 @@ import {
   useCreateDataAvailabilityCommentTypedDataMutation,
   useCreateDataAvailabilityCommentViaDispatcherMutation,
   usePublicationDetailsLazyQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { useApolloClient } from '@lenstube/lens/apollo'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
+import useAuthPersistStore from '@lib/store/auth'
+import useChannelStore from '@lib/store/channel'
+import usePersistStore from '@lib/store/persist'
+import { t, Trans } from '@lingui/macro'
 import type { FC } from 'react'
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import type { CustomErrorWithData } from 'utils'
-import {
-  Analytics,
-  ERROR_MESSAGE,
-  LENSHUB_PROXY_ADDRESS,
-  LENSTUBE_APP_ID,
-  LENSTUBE_WEBSITE_URL,
-  REQUESTING_SIGNATURE_MESSAGE,
-  TRACK
-} from 'utils'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import getUserLocale from 'utils/functions/getUserLocale'
-import omitKey from 'utils/functions/omitKey'
-import trimify from 'utils/functions/trimify'
-import uploadToAr from 'utils/functions/uploadToAr'
 import { v4 as uuidv4 } from 'uuid'
 import { useContractWrite, useSignTypedData } from 'wagmi'
-import { z } from 'zod'
+import type { z } from 'zod'
+import { object, string } from 'zod'
+
 type Props = {
   video: Publication
   defaultValue?: string
@@ -56,9 +58,8 @@ type Props = {
   hideEmojiPicker?: boolean
 }
 
-const formSchema = z.object({
-  comment: z
-    .string({ required_error: t`Enter valid comment` })
+const formSchema = object({
+  comment: string({ required_error: t`Enter valid comment` })
     .trim()
     .min(1, { message: t`Enter valid comment` })
     .max(5000, { message: t`Comment should not exceed 5000 characters` })
@@ -74,17 +75,18 @@ const NewComment: FC<Props> = ({
   const { cache } = useApolloClient()
 
   const [loading, setLoading] = useState(false)
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const activeChannel = useChannelStore((state) => state.activeChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
+  const handleWrongNetwork = useHandleWrongNetwork()
   const queuedComments = usePersistStore((state) => state.queuedComments)
   const setQueuedComments = usePersistStore((state) => state.setQueuedComments)
   const userSigNonce = useChannelStore((state) => state.userSigNonce)
   const setUserSigNonce = useChannelStore((state) => state.setUserSigNonce)
   // Dispatcher
-  const canUseRelay = selectedChannel?.dispatcher?.canUseRelay
-  const isSponsored = selectedChannel?.dispatcher?.sponsor
+  const canUseRelay = activeChannel?.dispatcher?.canUseRelay
+  const isSponsored = activeChannel?.dispatcher?.sponsor
 
   const {
     clearErrors,
@@ -141,11 +143,10 @@ const NewComment: FC<Props> = ({
     onError
   })
 
-  const { write: writeComment } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENSHUB_PROXY_ADDRESS,
     abi: LENSHUB_PROXY_ABI,
-    functionName: 'commentWithSig',
-    mode: 'recklesslyUnprepared',
+    functionName: 'comment',
     onError,
     onSuccess: (data) => {
       if (data.hash) {
@@ -203,51 +204,23 @@ const NewComment: FC<Props> = ({
   ) => {
     const { typedData } = data
     toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-    const signature = await signTypedDataAsync({
-      domain: omitKey(typedData?.domain, '__typename'),
-      types: omitKey(typedData?.types, '__typename'),
-      value: omitKey(typedData?.value, '__typename')
-    })
+    const signature = await signTypedDataAsync(getSignature(typedData))
     return signature
   }
 
   const [createCommentTypedData] = useCreateCommentTypedDataMutation({
     onCompleted: async ({ createCommentTypedData }) => {
       const { typedData, id } = createCommentTypedData
-      const {
-        profileId,
-        profileIdPointed,
-        pubIdPointed,
-        contentURI,
-        collectModule,
-        collectModuleInitData,
-        referenceModule,
-        referenceModuleData,
-        referenceModuleInitData
-      } = typedData?.value
       try {
         const signature = await getSignatureFromTypedData(
           createCommentTypedData
         )
-        const { v, r, s } = utils.splitSignature(signature)
-        const args = {
-          profileId,
-          profileIdPointed,
-          pubIdPointed,
-          contentURI,
-          collectModule,
-          collectModuleInitData,
-          referenceModule,
-          referenceModuleData,
-          referenceModuleInitData,
-          sig: { v, r, s, deadline: typedData.value.deadline }
-        }
         setUserSigNonce(userSigNonce + 1)
         const { data } = await broadcast({
           variables: { request: { id, signature } }
         })
         if (data?.broadcast?.__typename === 'RelayError') {
-          writeComment?.({ recklesslySetUnpreparedArgs: [args] })
+          write?.({ args: [typedData.value] })
         }
       } catch {
         setLoading(false)
@@ -354,6 +327,9 @@ const NewComment: FC<Props> = ({
       )
     }
     try {
+      if (handleWrongNetwork()) {
+        return
+      }
       setLoading(true)
       const metadataUri = await uploadToAr({
         version: '2.0.0',
@@ -365,7 +341,7 @@ const NewComment: FC<Props> = ({
         external_url: `${LENSTUBE_WEBSITE_URL}/watch/${video?.id}`,
         image: null,
         imageMimeType: null,
-        name: `${selectedChannel?.handle}'s comment on video ${video.metadata.name}`,
+        name: `${activeChannel?.handle}'s comment on video ${video.metadata.name}`,
         attributes: [
           {
             displayType: PublicationMetadataDisplayTypes.String,
@@ -383,12 +359,12 @@ const NewComment: FC<Props> = ({
       })
 
       const dataAvailablityRequest = {
-        from: selectedChannel?.id,
+        from: activeChannel?.id,
         commentOn: video.id,
         contentURI: metadataUri
       }
       const request = {
-        profileId: selectedChannel?.id,
+        profileId: activeChannel?.id,
         publicationId: video?.id,
         contentURI: metadataUri,
         collectModule: {
@@ -413,7 +389,7 @@ const NewComment: FC<Props> = ({
     } catch {}
   }
 
-  if (!selectedChannel || !selectedChannelId) {
+  if (!activeChannel || !selectedSimpleProfile?.id) {
     return null
   }
 
@@ -425,10 +401,10 @@ const NewComment: FC<Props> = ({
       <div className="flex flex-1 items-center space-x-2 md:space-x-3">
         <div className="flex-none">
           <img
-            src={getProfilePicture(selectedChannel, 'avatar')}
+            src={getProfilePicture(activeChannel, 'AVATAR')}
             className="h-9 w-9 rounded-full"
             draggable={false}
-            alt={selectedChannel?.handle}
+            alt={activeChannel?.handle}
           />
         </div>
         <div className="relative w-full">
@@ -454,7 +430,7 @@ const NewComment: FC<Props> = ({
           )}
         </div>
       </div>
-      <Button loading={loading}>
+      <Button variant="outline" loading={loading}>
         <Trans>Comment</Trans>
       </Button>
     </form>

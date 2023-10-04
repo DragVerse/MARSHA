@@ -1,13 +1,15 @@
 import DropMenu from '@components/UIElements/DropMenu'
 import Tooltip from '@components/UIElements/Tooltip'
+import { getShowFullScreen } from '@lenstube/browser'
+import { STATIC_ASSETS } from '@lenstube/constants'
 import usePersistStore from '@lib/store/persist'
 import { t } from '@lingui/macro'
 import { Trans } from '@lingui/react'
 import clsx from 'clsx'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import React from 'react'
+<<<<<<< HEAD
 import { RiGamepadLine } from 'react-icons/ri'
 import {
   DRAGVERSE_DECENTRALAND_URL,
@@ -15,6 +17,10 @@ import {
   FALLBACK_COVER_URL
 } from 'utils'
 import { getShowFullScreen } from 'utils/functions/getShowFullScreen'
+=======
+
+import CreateChannel from './CreateChannel'
+>>>>>>> upstream/main
 import Footer from './Footer'
 import BytesOutline from './Icons/BytesOutline'
 import ChevronLeftOutline from './Icons/ChevronLeftOutline'
@@ -25,9 +31,13 @@ import HomeOutline from './Icons/HomeOutline'
 import Locale from './Locale'
 import MobileBottomNav from './MobileBottomNav'
 
+<<<<<<< HEAD
 const CreateChannel = dynamic(() => import('./CreateChannel'))
 
 const Sidebar: React.FC = () => {
+=======
+const Sidebar = () => {
+>>>>>>> upstream/main
   const router = useRouter()
   const sidebarCollapsed = usePersistStore((state) => state.sidebarCollapsed)
   const setSidebarCollapsed = usePersistStore(
@@ -49,11 +59,11 @@ const Sidebar: React.FC = () => {
         <div
           className={clsx(
             'flex flex-col space-y-2',
-            sidebarCollapsed ? 'self-center' : 'w-full px-[18px]'
+            sidebarCollapsed ? 'self-center' : 'w-full px-3'
           )}
           data-testid="sidebar-items"
         >
-          <div className={clsx('py-3', sidebarCollapsed ? 'px-2' : 'px-3.5')}>
+          <div className={clsx('py-3', sidebarCollapsed ? 'px-2' : 'px-3')}>
             <Link
               href="/"
               className="flex items-center pt-0.5 focus:outline-none"
@@ -81,7 +91,7 @@ const Sidebar: React.FC = () => {
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800',
                   sidebarCollapsed
                     ? 'w-12 justify-center'
-                    : 'w-full space-x-3 px-4'
+                    : 'w-full space-x-3 px-3.5'
                 )}
               >
                 <HomeOutline className="h-5 w-5" />
@@ -106,7 +116,7 @@ const Sidebar: React.FC = () => {
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800',
                   sidebarCollapsed
                     ? 'w-12 justify-center'
-                    : 'w-full space-x-3 px-4'
+                    : 'w-full space-x-3 px-3.5'
                 )}
               >
                 <FeedOutline className="h-5 w-5 flex-none" />
@@ -131,7 +141,7 @@ const Sidebar: React.FC = () => {
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800',
                   sidebarCollapsed
                     ? 'w-12 justify-center'
-                    : 'w-full space-x-3 px-4'
+                    : 'w-full space-x-3 px-3.5'
                 )}
               >
                 <BytesOutline className="h-5 w-5" />
@@ -156,7 +166,7 @@ const Sidebar: React.FC = () => {
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800',
                   sidebarCollapsed
                     ? 'w-12 justify-center'
-                    : 'w-full space-x-3 px-4'
+                    : 'w-full space-x-3 px-3.5'
                 )}
               >
                 <ExploreOutline className="h-5 w-5" />
@@ -269,7 +279,7 @@ const Sidebar: React.FC = () => {
         </div>
         <div
           className={clsx(
-            'mb-1 flex flex-col',
+            'mb-2 flex flex-col',
             sidebarCollapsed ? 'mx-auto' : 'px-3'
           )}
         >
@@ -278,7 +288,7 @@ const Sidebar: React.FC = () => {
           <button
             type="button"
             className={clsx(
-              'mt-2 flex h-12 items-center justify-center rounded-full p-3.5 opacity-90 hover:bg-gray-50 hover:opacity-100 focus:outline-none dark:hover:bg-gray-800',
+              'flex h-12 items-center justify-center rounded-full p-3.5 opacity-90 hover:bg-gray-50 hover:opacity-100 focus:outline-none dark:hover:bg-gray-800',
               sidebarCollapsed ? 'w-12' : 'w-full'
             )}
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

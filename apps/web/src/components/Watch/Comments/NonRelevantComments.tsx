@@ -2,20 +2,19 @@ import ChevronDownOutline from '@components/Common/Icons/ChevronDownOutline'
 import ChevronUpOutline from '@components/Common/Icons/ChevronUpOutline'
 import CommentsShimmer from '@components/Shimmers/CommentsShimmer'
 import { Button } from '@components/UIElements/Button'
-import { Loader } from '@components/UIElements/Loader'
-import useChannelStore from '@lib/store/channel'
-import { t } from '@lingui/macro'
-import type { Publication } from 'lens'
+import { LENS_CUSTOM_FILTERS, SCROLL_ROOT_MARGIN } from '@lenstube/constants'
+import type { Publication } from '@lenstube/lens'
 import {
   CommentOrderingTypes,
   CommentRankingFilter,
-  PublicationMainFocus,
   useCommentsQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import useAuthPersistStore from '@lib/store/auth'
+import { t } from '@lingui/macro'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import { useInView } from 'react-cool-inview'
-import { LENS_CUSTOM_FILTERS, SCROLL_ROOT_MARGIN } from 'utils'
 
 import Comment from './Comment'
 
@@ -26,30 +25,23 @@ type Props = {
 
 const NonRelevantComments: FC<Props> = ({ video, className }) => {
   const [showSection, setShowSection] = useState(false)
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
 
   const request = {
     limit: 10,
     customFilters: LENS_CUSTOM_FILTERS,
     commentsOf: video.id,
-    metadata: {
-      mainContentFocus: [
-        PublicationMainFocus.Video,
-        PublicationMainFocus.Article,
-        PublicationMainFocus.Embed,
-        PublicationMainFocus.Link,
-        PublicationMainFocus.TextOnly
-      ]
-    },
     commentsOfOrdering: CommentOrderingTypes.Ranking,
     commentsRankingFilter: CommentRankingFilter.NoneRelevant
   }
   const variables = {
     request,
-    reactionRequest: selectedChannel
-      ? { profileId: selectedChannel?.id }
+    reactionRequest: selectedSimpleProfile
+      ? { profileId: selectedSimpleProfile?.id }
       : null,
-    channelId: selectedChannel?.id ?? null
+    channelId: selectedSimpleProfile?.id ?? null
   }
 
   const { data, loading, fetchMore } = useCommentsQuery({

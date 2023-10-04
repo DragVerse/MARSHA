@@ -5,6 +5,7 @@ import RadioInput from '@components/UIElements/RadioInput'
 import { Toggle } from '@components/UIElements/Toggle'
 import Tooltip from '@components/UIElements/Tooltip'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { checkIsBytesVideo } from '@lenstube/generic'
 import useAppStore from '@lib/store'
 import { t, Trans } from '@lingui/macro'
 import clsx from 'clsx'
@@ -12,25 +13,23 @@ import type { FC } from 'react'
 import React from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
-import checkIsBytesVideo from 'utils/functions/checkIsBytesVideo'
-import { z } from 'zod'
+import type { z } from 'zod'
+import { boolean, object, string } from 'zod'
 
 import Category from './Category'
 import CollectModule from './CollectModule'
 import ReferenceModule from './ReferenceModule'
 import Video from './Video'
 
-const formSchema = z.object({
-  title: z
-    .string()
+const formSchema = object({
+  title: string()
     .trim()
     .min(5, { message: t`Title should be atleast 5 characters` })
     .max(100, { message: t`Title should not exceed 100 characters` }),
-  description: z
-    .string()
+  description: string()
     .trim()
     .max(5000, { message: t`Description should not exceed 5000 characters` }),
-  isSensitiveContent: z.boolean()
+  isSensitiveContent: boolean()
 })
 
 export type VideoFormData = z.infer<typeof formSchema>
@@ -65,7 +64,7 @@ const Details: FC<Props> = ({ onUpload, onCancel }) => {
   })
 
   const onSubmitForm = (data: VideoFormData) => {
-    if (!uploadedVideo.thumbnail.length) {
+    if (!uploadedVideo.thumbnail?.length) {
       return toast.error(t`Please select or upload a thumbnail`)
     }
     onUpload(data)
@@ -195,7 +194,12 @@ const Details: FC<Props> = ({ onUpload, onCancel }) => {
         </div>
       </div>
       <div className="mt-4 flex items-center justify-end space-x-2">
-        <Button type="button" variant="hover" onClick={() => onCancel()}>
+        <Button
+          type="button"
+          variant="hover"
+          disabled={uploadedVideo.loading}
+          onClick={() => onCancel()}
+        >
           <Trans>Reset</Trans>
         </Button>
         <Button

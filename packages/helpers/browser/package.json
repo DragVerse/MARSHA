@@ -1,0 +1,16 @@
+{
+  "name": "@lenstube/browser",
+  "version": "0.0.0",
+  "license": "AGPL-3.0",
+  "main": "./index.ts",
+  "scripts": {
+    "lint": "eslint . --ext .js,.ts,.tsx",
+    "typecheck": "tsc --pretty"
+  },
+  "devDependencies": {
+    "typescript": "5.2.2"
+  },
+  "dependencies": {
+    "fast-average-color": "^9.4.0"
+  }
+}

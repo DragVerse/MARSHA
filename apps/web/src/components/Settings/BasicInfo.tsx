@@ -1,30 +1,62 @@
 import { LENS_PERIPHERY_ABI } from '@abis/LensPeriphery'
+import Badge from '@components/Common/Badge'
 import CopyOutline from '@components/Common/Icons/CopyOutline'
-import IsVerified from '@components/Common/IsVerified'
 import { Button } from '@components/UIElements/Button'
 import EmojiPicker from '@components/UIElements/EmojiPicker'
 import { Input } from '@components/UIElements/Input'
-import { Loader } from '@components/UIElements/Loader'
 import { TextArea } from '@components/UIElements/TextArea'
 import { zodResolver } from '@hookform/resolvers/zod'
-import useChannelStore from '@lib/store/channel'
-import { t, Trans } from '@lingui/macro'
-import { utils } from 'ethers'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import {
+  Analytics,
+  TRACK,
+  uploadToIPFS,
+  useCopyToClipboard
+} from '@lenstube/browser'
+import {
+  ERROR_MESSAGE,
+  LENS_PERIPHERY_ADDRESS,
+  LENSTUBE_APP_ID,
+  LENSTUBE_WEBSITE_URL,
+  REQUESTING_SIGNATURE_MESSAGE
+} from '@lenstube/constants'
+import {
+  getChannelCoverPicture,
+  getSignature,
+  getValueFromKeyInAttributes,
+  imageCdn,
+  sanitizeDStorageUrl,
+  trimify,
+  trimLensHandle,
+  uploadToAr
+} from '@lenstube/generic'
 import type {
   CreatePublicSetProfileMetadataUriRequest,
   MediaSet,
   Profile
-} from 'lens'
+} from '@lenstube/lens'
 import {
   PublicationMetadataDisplayTypes,
   useBroadcastMutation,
   useCreateSetProfileMetadataTypedDataMutation,
   useCreateSetProfileMetadataViaDispatcherMutation
+<<<<<<< HEAD
 } from 'lens'
+=======
+} from '@lenstube/lens'
+import type {
+  CustomErrorWithData,
+  IPFSUploadResult
+} from '@lenstube/lens/custom-types'
+import { Loader } from '@lenstube/ui'
+import useChannelStore from '@lib/store/channel'
+import { t, Trans } from '@lingui/macro'
+>>>>>>> upstream/main
 import type { ChangeEvent } from 'react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+<<<<<<< HEAD
 import type { CustomErrorWithData, IPFSUploadResult } from 'utils'
 import {
   Analytics,
@@ -44,30 +76,32 @@ import trimify from 'utils/functions/trimify'
 import uploadToAr from 'utils/functions/uploadToAr'
 import uploadToIPFS from 'utils/functions/uploadToIPFS'
 import useCopyToClipboard from 'utils/hooks/useCopyToClipboard'
+=======
+>>>>>>> upstream/main
 import { v4 as uuidv4 } from 'uuid'
 import { useContractWrite, useSignTypedData } from 'wagmi'
-import { z } from 'zod'
+import type { z } from 'zod'
+import { object, string, union } from 'zod'
 
 type Props = {
   channel: Profile & {
     coverPicture: MediaSet
   }
 }
-const formSchema = z.object({
-  displayName: z.union([
-    z
-      .string()
+const formSchema = object({
+  displayName: union([
+    string()
       .min(4, { message: 'Name should be atleast 5 characters' })
       .max(30, { message: 'Name should not exceed 30 characters' }),
-    z.string().max(0)
+    string().max(0)
   ]),
-  description: z.union([
-    z
-      .string()
+  description: union([
+    string()
       .min(5, { message: 'Description should be atleast 5 characters' })
       .max(1000, { message: 'Description should not exceed 1000 characters' }),
-    z.string().max(0)
+    string().max(0)
   ]),
+<<<<<<< HEAD
   twitter: z.string(),
   location: z.string(),
   website: z.union([
@@ -75,6 +109,16 @@ const formSchema = z.object({
       .string()
       .url({ message: 'Enter valid website URL (eg. https://dragverse.app)' }),
     z.string().max(0)
+=======
+  x: string(),
+  youtube: string(),
+  location: string(),
+  website: union([
+    string().url({
+      message: 'Enter valid website URL (eg. https://lenstube.xyz)'
+    }),
+    string().max(0)
+>>>>>>> upstream/main
   ])
 })
 type FormData = z.infer<typeof formSchema> & { coverImage?: string }
@@ -84,11 +128,12 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [coverImage, setCoverImage] = useState(getChannelCoverPicture(channel))
+  const handleWrongNetwork = useHandleWrongNetwork()
 
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const activeChannel = useChannelStore((state) => state.activeChannel)
   // Dispatcher
-  const canUseRelay = selectedChannel?.dispatcher?.canUseRelay
-  const isSponsored = selectedChannel?.dispatcher?.sponsor
+  const canUseRelay = activeChannel?.dispatcher?.canUseRelay
+  const isSponsored = activeChannel?.dispatcher?.sponsor
 
   const {
     register,
@@ -102,7 +147,8 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
       displayName: channel.name || '',
       description: channel.bio || '',
       location: getValueFromKeyInAttributes(channel?.attributes, 'location'),
-      twitter: getValueFromKeyInAttributes(channel?.attributes, 'twitter'),
+      x: getValueFromKeyInAttributes(channel?.attributes, 'x'),
+      youtube: getValueFromKeyInAttributes(channel?.attributes, 'youtube'),
       website: getValueFromKeyInAttributes(channel?.attributes, 'website')
     }
   })
@@ -112,7 +158,10 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
     setLoading(false)
   }
 
-  const onCompleted = () => {
+  const onCompleted = (__typename?: 'RelayError' | 'RelayerResult') => {
+    if (__typename === 'RelayError') {
+      return
+    }
     setLoading(false)
     toast.success('Channel details submitted')
     Analytics.track(TRACK.CHANNEL.UPDATE)
@@ -122,24 +171,24 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
     onError
   })
 
-  const { write: writeMetaData } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENS_PERIPHERY_ADDRESS,
     abi: LENS_PERIPHERY_ABI,
-    functionName: 'setProfileMetadataURIWithSig',
-    mode: 'recklesslyUnprepared',
+    functionName: 'setProfileMetadataURI',
     onError,
-    onSuccess: onCompleted
+    onSuccess: () => onCompleted()
   })
 
   const [broadcast] = useBroadcastMutation({
     onError,
-    onCompleted
+    onCompleted: ({ broadcast }) => onCompleted(broadcast.__typename)
   })
 
   const [createSetProfileMetadataViaDispatcher] =
     useCreateSetProfileMetadataViaDispatcherMutation({
       onError,
-      onCompleted
+      onCompleted: ({ createSetProfileMetadataViaDispatcher }) =>
+        onCompleted(createSetProfileMetadataViaDispatcher.__typename)
     })
 
   const [createSetProfileMetadataTypedData] =
@@ -148,24 +197,13 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
         const { typedData, id } = data.createSetProfileMetadataTypedData
         try {
           toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-          const signature = await signTypedDataAsync({
-            domain: omitKey(typedData?.domain, '__typename'),
-            types: omitKey(typedData?.types, '__typename'),
-            value: omitKey(typedData?.value, '__typename')
-          })
-          const { profileId, metadata } = typedData?.value
-          const { v, r, s } = utils.splitSignature(signature)
-          const args = {
-            user: channel?.ownedBy,
-            profileId,
-            metadata,
-            sig: { v, r, s, deadline: typedData.value.deadline }
-          }
+          const signature = await signTypedDataAsync(getSignature(typedData))
           const { data } = await broadcast({
             variables: { request: { id, signature } }
           })
           if (data?.broadcast?.__typename === 'RelayError') {
-            writeMetaData?.({ recklesslySetUnpreparedArgs: [args] })
+            const { profileId, metadata } = typedData.value
+            return write?.({ args: [profileId, metadata] })
           }
         } catch {
           setLoading(false)
@@ -203,11 +241,15 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
   const otherAttributes =
     channel?.attributes
       ?.filter(
-        (attr) => !['website', 'location', 'twitter', 'app'].includes(attr.key)
+        (attr) =>
+          !['website', 'location', 'x', 'youtube', 'app'].includes(attr.key)
       )
       .map(({ traitType, key, value }) => ({ traitType, key, value })) ?? []
 
   const onSaveBasicInfo = async (data: FormData) => {
+    if (handleWrongNetwork()) {
+      return
+    }
     setLoading(true)
     try {
       const metadataUri = await uploadToAr({
@@ -231,9 +273,15 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
           },
           {
             displayType: PublicationMetadataDisplayTypes.String,
-            traitType: 'twitter',
-            key: 'twitter',
-            value: data.twitter
+            traitType: 'x',
+            key: 'x',
+            value: data.x
+          },
+          {
+            displayType: PublicationMetadataDisplayTypes.String,
+            traitType: 'youtube',
+            key: 'youtube',
+            value: data.youtube
           },
           {
             displayType: PublicationMetadataDisplayTypes.String,
@@ -283,7 +331,7 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
             sanitizeDStorageUrl(coverImage) ??
             imageCdn(
               sanitizeDStorageUrl(getChannelCoverPicture(channel)),
-              'thumbnail'
+              'THUMBNAIL'
             )
           }
           className="h-48 w-full rounded bg-white object-cover object-center dark:bg-gray-900 md:h-56"
@@ -313,8 +361,9 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
       <div className="flex items-center space-x-3">
         <h6 className="flex items-center space-x-1">
           <span>{channel?.handle}</span>
-          <IsVerified id={channel?.id} size="xs" />
+          <Badge id={channel?.id} size="xs" />
         </h6>
+<<<<<<< HEAD
         {/* {IS_MAINNET &&
           !VERIFIED_CHANNELS.includes(channel?.id) &&
           channel.stats.totalFollowers > 500 && (
@@ -327,6 +376,8 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
               ( <Trans>Get Verified</Trans> )
             </Link>
           )} */}
+=======
+>>>>>>> upstream/main
       </div>
       <div className="mt-4">
         <div className="mb-1 flex items-center">
@@ -336,12 +387,16 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
         </div>
         <div className="flex items-center space-x-2">
           <span>
-            {LENSTUBE_WEBSITE_URL}/channel/{channel.handle}
+            {LENSTUBE_WEBSITE_URL}/channel/{trimLensHandle(channel.handle)}
           </span>
           <button
             className="hover:opacity-60 focus:outline-none"
             onClick={() =>
-              onCopyChannelUrl(`${LENSTUBE_WEBSITE_URL}/${channel.handle}`)
+              onCopyChannelUrl(
+                `${LENSTUBE_WEBSITE_URL}/channel/${trimLensHandle(
+                  channel.handle
+                )}`
+              )
             }
             type="button"
           >
@@ -376,11 +431,20 @@ const BasicInfo: React.FC<Props> = ({ channel }: Props) => {
       </div>
       <div className="mt-4">
         <Input
-          label="Twitter"
-          placeholder="johndoe"
-          {...register('twitter')}
-          validationError={errors.twitter?.message}
-          prefix="https://twitter.com/"
+          label="Youtube"
+          placeholder="channel"
+          {...register('youtube')}
+          validationError={errors.x?.message}
+          prefix="https://youtube.com/"
+        />
+      </div>
+      <div className="mt-4">
+        <Input
+          label="X.com"
+          placeholder="profile"
+          {...register('x')}
+          validationError={errors.x?.message}
+          prefix="https://x.com/"
         />
       </div>
       <div className="mt-4">

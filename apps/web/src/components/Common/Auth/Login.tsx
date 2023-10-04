@@ -1,26 +1,33 @@
+import { Button } from '@components/UIElements/Button'
+import Modal from '@components/UIElements/Modal'
+import { Analytics, TRACK } from '@lenstube/browser'
+import { ERROR_MESSAGE, POLYGON_CHAIN_ID } from '@lenstube/constants'
+import { logger } from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
+import {
+  useAuthenticateMutation,
+  useChallengeLazyQuery,
+  useSimpleProfilesLazyQuery
+} from '@lenstube/lens'
+import type { CustomErrorWithData } from '@lenstube/lens/custom-types'
 import useAuthPersistStore, { signIn, signOut } from '@lib/store/auth'
 import useChannelStore from '@lib/store/channel'
-import { t } from '@lingui/macro'
-import type { Profile } from 'lens'
-import {
-  useAllProfilesLazyQuery,
-  useAuthenticateMutation,
-  useChallengeLazyQuery
-} from 'lens'
+import useNetworkStore from '@lib/store/network'
+import { t, Trans } from '@lingui/macro'
 import { useRouter } from 'next/router'
 import React, { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import type { CustomErrorWithData } from 'utils'
-import { Analytics, ERROR_MESSAGE, POLYGON_CHAIN_ID, TRACK } from 'utils'
-import logger from 'utils/logger'
-import { useAccount, useDisconnect, useNetwork, useSignMessage } from 'wagmi'
+import {
+  useAccount,
+  useDisconnect,
+  useSignMessage,
+  useSwitchNetwork
+} from 'wagmi'
 
 import ConnectWalletButton from './ConnectWalletButton'
 
 const Login = () => {
   const router = useRouter()
-
-  const { chain } = useNetwork()
   const { address, connector, isConnected } = useAccount()
   const [loading, setLoading] = useState(false)
   const { disconnect } = useDisconnect({
@@ -28,27 +35,28 @@ const Login = () => {
       toast.error(error?.data?.message ?? error?.message)
     }
   })
+  const { switchNetwork } = useSwitchNetwork({
+    onError: () => {
+      toast.error(t`Please change your network to Polygon!`)
+    }
+  })
 
   const setShowCreateChannel = useChannelStore(
     (state) => state.setShowCreateChannel
   )
-  const setChannels = useChannelStore((state) => state.setChannels)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
-  const setSelectedChannel = useChannelStore(
-    (state) => state.setSelectedChannel
+  const setActiveChannel = useChannelStore((state) => state.setActiveChannel)
+  const setSelectedSimpleProfile = useAuthPersistStore(
+    (state) => state.setSelectedSimpleProfile
   )
-  const setSelectedChannelId = useAuthPersistStore(
-    (state) => state.setSelectedChannelId
-  )
+  const { showSwitchNetwork, setShowSwitchNetwork } = useNetworkStore()
 
   const onError = () => {
     setLoading(false)
     signOut()
-    setSelectedChannel(null)
-    setSelectedChannelId(null)
+    setActiveChannel(null)
   }
 
   const { signMessageAsync } = useSignMessage({
@@ -60,9 +68,8 @@ const Login = () => {
     onError
   })
   const [authenticate, { error: errorAuthenticate }] = useAuthenticateMutation()
-  const [getChannels, { error: errorProfiles }] = useAllProfilesLazyQuery({
-    fetchPolicy: 'no-cache'
-  })
+  const [getAllSimpleProfiles, { error: errorProfiles }] =
+    useSimpleProfilesLazyQuery()
 
   useEffect(() => {
     if (
@@ -79,12 +86,7 @@ const Login = () => {
     }
   }, [errorAuthenticate, errorChallenge, errorProfiles])
 
-  const isReadyToSign =
-    connector?.id &&
-    isConnected &&
-    chain?.id === POLYGON_CHAIN_ID &&
-    !selectedChannel &&
-    !selectedChannelId
+  const isReadyToSign = isConnected && !selectedSimpleProfile?.id
 
   const handleSign = useCallback(async () => {
     if (!isReadyToSign) {
@@ -104,7 +106,7 @@ const Login = () => {
         message: challenge?.data?.challenge?.text
       })
       if (!signature) {
-        return toast.error(t`Invalid Signature!`)
+        return
       }
       const result = await authenticate({
         variables: { request: { address, signature } }
@@ -112,24 +114,24 @@ const Login = () => {
       const accessToken = result.data?.authenticate.accessToken
       const refreshToken = result.data?.authenticate.refreshToken
       signIn({ accessToken, refreshToken })
-      const { data: channelsData } = await getChannels({
+      const { data: profilesData } = await getAllSimpleProfiles({
         variables: {
           request: { ownedBy: [address] }
-        }
+        },
+        fetchPolicy: 'no-cache'
       })
       if (
-        !channelsData?.profiles ||
-        channelsData?.profiles?.items.length === 0
+        !profilesData?.profiles ||
+        profilesData?.profiles?.items.length === 0
       ) {
-        setSelectedChannel(null)
-        setSelectedChannelId(null)
+        setActiveChannel(null)
+        setSelectedSimpleProfile(null)
         setShowCreateChannel(true)
       } else {
-        const channels = channelsData?.profiles?.items as Profile[]
-        const defaultChannel = channels.find((channel) => channel.isDefault)
-        setChannels(channels)
-        setSelectedChannel(defaultChannel ?? channels[0])
-        setSelectedChannelId(defaultChannel?.id ?? channels[0].id)
+        const profiles = profilesData?.profiles?.items as Profile[]
+        const defaultProfile = profiles.find((profile) => profile.isDefault)
+        const profile = defaultProfile ?? profiles[0]
+        setSelectedSimpleProfile(profile)
         if (router.query?.next) {
           router.push(router.query?.next as string)
         }
@@ -149,25 +151,44 @@ const Login = () => {
   }, [
     address,
     authenticate,
-    getChannels,
+    getAllSimpleProfiles,
     loadChallenge,
     router,
-    setChannels,
-    setSelectedChannel,
-    setSelectedChannelId,
+    setActiveChannel,
+    setSelectedSimpleProfile,
     setShowCreateChannel,
     signMessageAsync
   ])
 
-  useEffect(() => {
-    if (isReadyToSign) {
-      handleSign()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected])
-
   return (
-    <ConnectWalletButton handleSign={() => handleSign()} signing={loading} />
+    <>
+      <Modal
+        title={t`Wrong Network`}
+        show={showSwitchNetwork}
+        panelClassName="max-w-lg z-50"
+        onClose={() => setShowSwitchNetwork(false)}
+      >
+        <h6 className="py-4">
+          <Trans>Connect to the right network to continue</Trans>
+        </h6>
+        <div className="flex justify-end">
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (switchNetwork) {
+                switchNetwork(POLYGON_CHAIN_ID)
+                setShowSwitchNetwork(false)
+              } else {
+                toast.error(t`Please change your network to Polygon!`)
+              }
+            }}
+          >
+            <Trans>Switch to Polygon</Trans>
+          </Button>
+        </div>
+      </Modal>
+      <ConnectWalletButton handleSign={() => handleSign()} signing={loading} />
+    </>
   )
 }
 

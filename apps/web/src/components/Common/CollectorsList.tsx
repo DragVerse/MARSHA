@@ -1,19 +1,22 @@
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
-import type { Wallet } from 'lens'
-import { useCollectorsQuery } from 'lens'
+import {
+  formatNumber,
+  getProfilePicture,
+  getRandomProfilePicture,
+  imageCdn,
+  shortenAddress,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Wallet } from '@lenstube/lens'
+import { useCollectorsQuery } from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
 import { useInView } from 'react-cool-inview'
-import formatNumber from 'utils/functions/formatNumber'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import { getRandomProfilePicture } from 'utils/functions/getRandomProfilePicture'
-import imageCdn from 'utils/functions/imageCdn'
-import { shortenAddress } from 'utils/functions/shortenAddress'
 
+import Badge from './Badge'
 import UserOutline from './Icons/UserOutline'
-import IsVerified from './IsVerified'
 import AddressExplorerLink from './Links/AddressExplorerLink'
 
 type Props = {
@@ -56,24 +59,26 @@ const CollectorsList: FC<Props> = ({ videoId }) => {
   }
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-2 space-y-3">
       {collectors?.map((wallet: Wallet) => (
         <div className="flex flex-col" key={wallet.address}>
           {wallet?.defaultProfile ? (
             <Link
-              href={`/channel/${wallet?.defaultProfile?.handle}`}
+              href={`/channel/${trimLensHandle(
+                wallet?.defaultProfile?.handle
+              )}`}
               className="font-base flex items-center justify-between"
             >
               <div className="flex items-center space-x-1.5">
                 <img
-                  className="h-5 w-5 rounded"
-                  src={getProfilePicture(wallet?.defaultProfile, 'avatar')}
+                  className="h-5 w-5 rounded-full"
+                  src={getProfilePicture(wallet?.defaultProfile, 'AVATAR')}
                   alt={wallet.defaultProfile.handle}
                   draggable={false}
                 />
                 <div className="flex items-center space-x-1">
-                  <span>{wallet?.defaultProfile?.handle}</span>
-                  <IsVerified id={wallet?.defaultProfile?.id} size="xs" />
+                  <span>{trimLensHandle(wallet?.defaultProfile?.handle)}</span>
+                  <Badge id={wallet?.defaultProfile?.id} size="xs" />
                 </div>
               </div>
               <div className="flex items-center space-x-1 whitespace-nowrap text-xs opacity-80">
@@ -87,10 +92,10 @@ const CollectorsList: FC<Props> = ({ videoId }) => {
             <AddressExplorerLink address={wallet?.address}>
               <div className="font-base flex items-center space-x-1.5">
                 <img
-                  className="h-5 w-5 rounded"
+                  className="h-5 w-5 rounded-full"
                   src={imageCdn(
                     getRandomProfilePicture(wallet.address),
-                    'avatar'
+                    'AVATAR'
                   )}
                   alt={wallet.address.handle}
                   draggable={false}

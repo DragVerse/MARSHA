@@ -1,21 +1,23 @@
 import MetaTags from '@components/Common/MetaTags'
 import Timeline from '@components/Home/Timeline'
 import TimelineShimmer from '@components/Shimmers/TimelineShimmer'
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
-import { t } from '@lingui/macro'
-import type { Publication } from 'lens'
-import { SearchRequestTypes, useSearchPublicationsQuery } from 'lens'
-import { useRouter } from 'next/router'
-import React from 'react'
-import { useInView } from 'react-cool-inview'
-import Custom404 from 'src/pages/404'
 import {
+  ALLOWED_APP_IDS,
+  IS_MAINNET,
   LENS_CUSTOM_FILTERS,
   LENSTUBE_APP_ID,
   LENSTUBE_BYTES_APP_ID,
   SCROLL_ROOT_MARGIN
-} from 'utils'
+} from '@lenstube/constants'
+import type { Publication } from '@lenstube/lens'
+import { SearchRequestTypes, useSearchPublicationsQuery } from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
+import { t } from '@lingui/macro'
+import { useRouter } from 'next/router'
+import React from 'react'
+import { useInView } from 'react-cool-inview'
+import Custom404 from 'src/pages/404'
 
 const ExploreHashtag = () => {
   const { query } = useRouter()
@@ -24,7 +26,9 @@ const ExploreHashtag = () => {
   const request = {
     type: SearchRequestTypes.Publication,
     limit: 32,
-    sources: [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID],
+    sources: IS_MAINNET
+      ? [LENSTUBE_APP_ID, LENSTUBE_BYTES_APP_ID, ...ALLOWED_APP_IDS]
+      : undefined,
     customFilters: LENS_CUSTOM_FILTERS,
     query: hashtag
   }

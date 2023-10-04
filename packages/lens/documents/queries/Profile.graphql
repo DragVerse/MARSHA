@@ -12,6 +12,9 @@ query Profile($request: SingleProfileQueryRequest!, $who: ProfileId) {
     interests
     isFollowedByMe
     isFollowing(who: $who)
+    invitedBy {
+      handle
+    }
     onChainIdentity {
       proofOfHumanity
       worldcoin {
@@ -37,15 +40,17 @@ query Profile($request: SingleProfileQueryRequest!, $who: ProfileId) {
     }
     bio
     stats {
-      totalFollowers
-      totalPosts
-      totalComments
-      totalMirrors
-      totalCollects
+      ...ProfileStatsFields
     }
     picture {
       ... on MediaSet {
         original {
+          url
+        }
+        onChain {
+          url
+        }
+        optimized {
           url
         }
       }
@@ -56,6 +61,12 @@ query Profile($request: SingleProfileQueryRequest!, $who: ProfileId) {
     coverPicture {
       ... on MediaSet {
         original {
+          url
+        }
+        onChain {
+          url
+        }
+        optimized {
           url
         }
       }

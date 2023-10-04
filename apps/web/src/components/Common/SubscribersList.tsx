@@ -1,20 +1,23 @@
-import { Loader } from '@components/UIElements/Loader'
 import { NoDataFound } from '@components/UIElements/NoDataFound'
+import {
+  formatNumber,
+  getProfilePicture,
+  getRandomProfilePicture,
+  imageCdn,
+  shortenAddress,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Follower, Profile } from '@lenstube/lens'
+import { useSubscribersQuery } from '@lenstube/lens'
+import { Loader } from '@lenstube/ui'
 import { t } from '@lingui/macro'
-import type { Follower, Profile } from 'lens'
-import { useSubscribersQuery } from 'lens'
 import Link from 'next/link'
 import type { FC } from 'react'
 import React from 'react'
 import { useInView } from 'react-cool-inview'
-import formatNumber from 'utils/functions/formatNumber'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import { getRandomProfilePicture } from 'utils/functions/getRandomProfilePicture'
-import imageCdn from 'utils/functions/imageCdn'
-import { shortenAddress } from 'utils/functions/shortenAddress'
 
+import Badge from './Badge'
 import UserOutline from './Icons/UserOutline'
-import IsVerified from './IsVerified'
 import AddressExplorerLink from './Links/AddressExplorerLink'
 
 type Props = {
@@ -57,30 +60,31 @@ const SubscribersList: FC<Props> = ({ channel }) => {
   }
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-2 space-y-3">
       {subscribers?.map((subscriber: Follower) => (
         <div className="flex flex-col" key={subscriber.wallet.address}>
           {subscriber.wallet?.defaultProfile ? (
             <Link
-              href={`/channel/${subscriber.wallet?.defaultProfile?.handle}`}
+              href={`/channel/${trimLensHandle(
+                subscriber.wallet?.defaultProfile?.handle
+              )}`}
               className="font-base flex items-center justify-between"
             >
               <div className="flex items-center space-x-1.5">
                 <img
-                  className="h-5 w-5 rounded"
+                  className="h-5 w-5 rounded-full"
                   src={getProfilePicture(
                     subscriber.wallet?.defaultProfile,
-                    'avatar'
+                    'AVATAR'
                   )}
                   alt={subscriber.wallet.defaultProfile.handle}
                   draggable={false}
                 />
                 <div className="flex items-center space-x-1">
-                  <span>{subscriber.wallet?.defaultProfile?.handle}</span>
-                  <IsVerified
-                    id={subscriber.wallet?.defaultProfile?.id}
-                    size="xs"
-                  />
+                  <span>
+                    {trimLensHandle(subscriber.wallet?.defaultProfile?.handle)}
+                  </span>
+                  <Badge id={subscriber.wallet?.defaultProfile?.id} size="xs" />
                 </div>
               </div>
               <div className="flex items-center space-x-1 whitespace-nowrap text-xs opacity-80">
@@ -96,10 +100,10 @@ const SubscribersList: FC<Props> = ({ channel }) => {
             <AddressExplorerLink address={subscriber.wallet?.address}>
               <div className="font-base flex items-center space-x-1.5">
                 <img
-                  className="h-5 w-5 rounded"
+                  className="h-5 w-5 rounded-full"
                   src={imageCdn(
                     getRandomProfilePicture(subscriber.wallet.address),
-                    'avatar'
+                    'AVATAR'
                   )}
                   alt={subscriber.wallet.address.handle}
                   draggable={false}

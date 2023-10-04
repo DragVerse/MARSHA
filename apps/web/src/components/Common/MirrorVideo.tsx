@@ -1,24 +1,36 @@
 import { LENSHUB_PROXY_ABI } from '@abis/LensHubProxy'
 import Tooltip from '@components/UIElements/Tooltip'
-import useAuthPersistStore from '@lib/store/auth'
-import useChannelStore from '@lib/store/channel'
-import { t } from '@lingui/macro'
-import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { utils } from 'ethers'
+import useHandleWrongNetwork from '@hooks/useHandleWrongNetwork'
+import { Analytics, TRACK } from '@lenstube/browser'
+import {
+  ERROR_MESSAGE,
+  LENSHUB_PROXY_ADDRESS,
+  REQUESTING_SIGNATURE_MESSAGE
+} from '@lenstube/constants'
+import { getSignature } from '@lenstube/generic'
 import type {
   CreateMirrorBroadcastItemResult,
   CreateMirrorRequest,
   Publication
-} from 'lens'
+} from '@lenstube/lens'
 import {
   useBroadcastMutation,
   useCreateDataAvailabilityMirrorViaDispatcherMutation,
   useCreateMirrorTypedDataMutation,
   useCreateMirrorViaDispatcherMutation
-} from 'lens'
+} from '@lenstube/lens'
+import type {
+  CustomErrorWithData,
+  LenstubeCollectModule
+} from '@lenstube/lens/custom-types'
+import useAuthPersistStore from '@lib/store/auth'
+import useChannelStore from '@lib/store/channel'
+import { t } from '@lingui/macro'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import type { FC } from 'react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
+<<<<<<< HEAD
 import type { CustomErrorWithData, DragverseCollectModule } from 'utils'
 import {
   Analytics,
@@ -28,6 +40,8 @@ import {
   TRACK
 } from 'utils'
 import omitKey from 'utils/functions/omitKey'
+=======
+>>>>>>> upstream/main
 import { useContractWrite, useSignTypedData } from 'wagmi'
 
 type Props = {
@@ -39,17 +53,18 @@ type Props = {
 const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
   const [loading, setLoading] = useState(false)
   const { openConnectModal } = useConnectModal()
+  const handleWrongNetwork = useHandleWrongNetwork()
 
   const userSigNonce = useChannelStore((state) => state.userSigNonce)
   const setUserSigNonce = useChannelStore((state) => state.setUserSigNonce)
-  const selectedChannelId = useAuthPersistStore(
-    (state) => state.selectedChannelId
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
   )
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const activeChannel = useChannelStore((state) => state.activeChannel)
 
   // Dispatcher
-  const canUseRelay = selectedChannel?.dispatcher?.canUseRelay
-  const isSponsored = selectedChannel?.dispatcher?.sponsor
+  const canUseRelay = activeChannel?.dispatcher?.canUseRelay
+  const isSponsored = activeChannel?.dispatcher?.sponsor
 
   const collectModule =
     video?.__typename === 'Post'
@@ -90,11 +105,10 @@ const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
       onCompleted(createMirrorViaDispatcher.__typename)
   })
 
-  const { write: mirrorWithSig } = useContractWrite({
+  const { write } = useContractWrite({
     address: LENSHUB_PROXY_ADDRESS,
     abi: LENSHUB_PROXY_ABI,
-    functionName: 'mirrorWithSig',
-    mode: 'recklesslyUnprepared',
+    functionName: 'mirror',
     onError,
     onSuccess: () => onCompleted()
   })
@@ -108,38 +122,15 @@ const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
     onCompleted: async ({ createMirrorTypedData }) => {
       const { id, typedData } =
         createMirrorTypedData as CreateMirrorBroadcastItemResult
-      const {
-        profileId,
-        profileIdPointed,
-        pubIdPointed,
-        referenceModule,
-        referenceModuleData,
-        referenceModuleInitData
-      } = typedData?.value
       try {
         toast.loading(REQUESTING_SIGNATURE_MESSAGE)
-        const signature = await signTypedDataAsync({
-          domain: omitKey(typedData?.domain, '__typename'),
-          types: omitKey(typedData?.types, '__typename'),
-          value: omitKey(typedData?.value, '__typename')
-        })
-        const { v, r, s } = utils.splitSignature(signature)
-        const sig = { v, r, s, deadline: typedData.value.deadline }
-        const args = {
-          profileId,
-          profileIdPointed,
-          pubIdPointed,
-          referenceModule,
-          referenceModuleData,
-          referenceModuleInitData,
-          sig
-        }
+        const signature = await signTypedDataAsync(getSignature(typedData))
         setUserSigNonce(userSigNonce + 1)
         const { data } = await broadcast({
           variables: { request: { id, signature } }
         })
         if (data?.broadcast?.__typename === 'RelayError') {
-          mirrorWithSig?.({ recklesslySetUnpreparedArgs: [args] })
+          write?.({ args: [typedData.value] })
         }
       } catch {
         setLoading(false)
@@ -167,8 +158,11 @@ const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
   }
 
   const mirrorVideo = async () => {
-    if (!selectedChannelId) {
+    if (!selectedSimpleProfile?.id) {
       return openConnectModal?.()
+    }
+    if (handleWrongNetwork()) {
+      return
     }
 
     if (video.isDataAvailability && !isSponsored) {
@@ -179,7 +173,7 @@ const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
 
     setLoading(true)
     const request: CreateMirrorRequest = {
-      profileId: selectedChannel?.id,
+      profileId: activeChannel?.id,
       publicationId: video?.id,
       referenceModule: {
         followerOnlyReferenceModule: false
@@ -188,7 +182,7 @@ const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
 
     // Payload for the data availability mirror
     const dataAvailablityRequest = {
-      from: selectedChannel?.id,
+      from: activeChannel?.id,
       mirror: video?.id
     }
 
@@ -209,8 +203,10 @@ const MirrorVideo: FC<Props> = ({ video, children, onMirrorSuccess }) => {
     return null
   }
 
-  const tooltipContent = collectModule?.referralFee
-    ? `Mirror video for ${collectModule?.referralFee}% referral fee`
+  const referralFee =
+    collectModule?.referralFee ?? collectModule?.fee?.referralFee
+  const tooltipContent = referralFee
+    ? `Mirror video for ${referralFee}% referral fee`
     : t`Mirror video across Lens`
 
   return (

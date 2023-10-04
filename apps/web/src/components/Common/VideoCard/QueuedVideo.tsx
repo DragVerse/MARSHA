@@ -1,34 +1,39 @@
-import { useApolloClient } from '@apollo/client'
 import Tooltip from '@components/UIElements/Tooltip'
-import useAppStore, { UPLOADED_VIDEO_FORM_DEFAULTS } from '@lib/store'
-import useChannelStore from '@lib/store/channel'
-import usePersistStore from '@lib/store/persist'
-import { t } from '@lingui/macro'
-import clsx from 'clsx'
-import type { Profile } from 'lens'
+import { useAverageColor } from '@lenstube/browser'
+import { STATIC_ASSETS } from '@lenstube/constants'
+import {
+  getProfilePicture,
+  imageCdn,
+  sanitizeDStorageUrl,
+  trimLensHandle
+} from '@lenstube/generic'
+import type { Profile } from '@lenstube/lens'
 import {
   PublicationDetailsDocument,
   useHasTxHashBeenIndexedQuery,
   usePublicationDetailsLazyQuery,
   useTxIdToTxHashLazyQuery
-} from 'lens'
+} from '@lenstube/lens'
+import { useApolloClient } from '@lenstube/lens/apollo'
+import type { QueuedVideoType } from '@lenstube/lens/custom-types'
+import useAppStore, { UPLOADED_VIDEO_FORM_DEFAULTS } from '@lib/store'
+import useAuthPersistStore from '@lib/store/auth'
+import usePersistStore from '@lib/store/persist'
+import { t } from '@lingui/macro'
+import clsx from 'clsx'
 import type { FC } from 'react'
 import React from 'react'
-import type { QueuedVideoType } from 'utils'
-import { STATIC_ASSETS } from 'utils'
-import getProfilePicture from 'utils/functions/getProfilePicture'
-import imageCdn from 'utils/functions/imageCdn'
-import sanitizeDStorageUrl from 'utils/functions/sanitizeDStorageUrl'
-import useAverageColor from 'utils/hooks/useAverageColor'
 
-import IsVerified from '../IsVerified'
+import Badge from '../Badge'
 
 type Props = {
   queuedVideo: QueuedVideoType
 }
 
 const QueuedVideo: FC<Props> = ({ queuedVideo }) => {
-  const selectedChannel = useChannelStore((state) => state.selectedChannel)
+  const selectedSimpleProfile = useAuthPersistStore(
+    (state) => state.selectedSimpleProfile
+  )
   const uploadedVideo = useAppStore((state) => state.uploadedVideo)
   const setUploadedVideo = useAppStore((state) => state.setUploadedVideo)
 
@@ -42,7 +47,7 @@ const QueuedVideo: FC<Props> = ({ queuedVideo }) => {
     uploadedVideo.isSensitiveContent
       ? `${STATIC_ASSETS}/images/sensor-blur.png`
       : sanitizeDStorageUrl(queuedVideo.thumbnailUrl),
-    uploadedVideo.isByteVideo ? 'thumbnail_v' : 'thumbnail'
+    uploadedVideo.isByteVideo ? 'THUMBNAIL_V' : 'THUMBNAIL'
   )
   const { color: backgroundColor } = useAverageColor(
     thumbnailUrl,
@@ -96,6 +101,7 @@ const QueuedVideo: FC<Props> = ({ queuedVideo }) => {
     },
     skip: !queuedVideo?.txnId?.length && !queuedVideo?.txnHash?.length,
     pollInterval: 1000,
+    notifyOnNetworkStatusChange: true,
     onCompleted: async (data) => {
       if (data.hasTxHashBeenIndexed.__typename === 'TransactionError') {
         return removeFromQueue()
@@ -141,8 +147,8 @@ const QueuedVideo: FC<Props> = ({ queuedVideo }) => {
         <div className="flex items-start space-x-2.5">
           <img
             className="h-8 w-8 rounded-full"
-            src={getProfilePicture(selectedChannel as Profile)}
-            alt={selectedChannel?.handle}
+            src={getProfilePicture(selectedSimpleProfile as Profile)}
+            alt={selectedSimpleProfile?.handle}
             draggable={false}
           />
           <div className="grid flex-1">
@@ -163,8 +169,8 @@ const QueuedVideo: FC<Props> = ({ queuedVideo }) => {
               </div>
             </div>
             <span className="flex w-fit items-center space-x-0.5 text-[13px] opacity-70">
-              <span>{selectedChannel?.handle}</span>
-              <IsVerified id={selectedChannel?.id} size="xs" />
+              <span>{trimLensHandle(selectedSimpleProfile?.handle)}</span>
+              <Badge id={selectedSimpleProfile?.id} size="xs" />
             </span>
           </div>
         </div>
